@@ -7,3 +7,7 @@ sentence-transformers==2.2.2
 pydantic==2.5.0
 requests==2.31.0
 pytest==7.4.3
+Flask-SQLAlchemy
+passlib
+bcrypt
+PyJWT
