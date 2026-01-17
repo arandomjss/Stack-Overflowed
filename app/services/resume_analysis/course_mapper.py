@@ -3,11 +3,30 @@ import os
 from typing import List, Dict
 from app.models.schemas import RoadmapPhase, RoadmapSkill, Course
 
+from app.database import get_db_connection
+
 def _load_courses() -> Dict:
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    courses_path = os.path.join(current_dir, "courses.json")
-    with open(courses_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    conn = get_db_connection()
+    courses_data = {}
+    try:
+        # Structure: skill -> list of course dicts
+        rows = conn.execute('SELECT skill, platform, title, url FROM courses').fetchall()
+        
+        for row in rows:
+            skill = row['skill']
+            course = {
+                "platform": row['platform'],
+                "title": row['title'],
+                "url": row['url']
+            }
+            
+            if skill not in courses_data:
+                courses_data[skill] = []
+            courses_data[skill].append(course)
+            
+    finally:
+        conn.close()
+    return courses_data
 
 def map_courses_to_skills(roadmap_phases: List[RoadmapPhase]) -> List[RoadmapPhase]:
     courses_data = _load_courses()

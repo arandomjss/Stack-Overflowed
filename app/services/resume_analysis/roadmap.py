@@ -3,11 +3,31 @@ import os
 from typing import List, Dict, Set
 from app.models.schemas import Skill, RoadmapPhase, RoadmapSkill
 
+from app.database import get_db_connection
+from typing import Dict, List
+
 def _load_roles() -> Dict:
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    roles_path = os.path.join(current_dir, "roles.json")
-    with open(roles_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    conn = get_db_connection()
+    roles_data = {}
+    try:
+        # Structure: role -> category -> list of skills
+        rows = conn.execute('SELECT role_name, category, skill FROM roles').fetchall()
+        
+        for row in rows:
+            role = row['role_name']
+            category = row['category']
+            skill = row['skill']
+            
+            if role not in roles_data:
+                roles_data[role] = {}
+            if category not in roles_data[role]:
+                roles_data[role][category] = []
+                
+            roles_data[role][category].append(skill)
+            
+    finally:
+        conn.close()
+    return roles_data
 
 def _get_user_skills(scored_skills: List[Skill], threshold: float = 0.3) -> Set[str]:
     return {skill.name.lower() for skill in scored_skills if skill.confidence >= threshold}

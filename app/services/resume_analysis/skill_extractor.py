@@ -36,12 +36,17 @@ def _load_keybert():
             kw_model = None
     return kw_model
 
+from app.database import get_db_connection
+
 def _load_ontology() -> List[str]:
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    ontology_path = os.path.join(current_dir, "ontology.json")
-    with open(ontology_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-        return data.get("skills", [])
+    conn = get_db_connection()
+    ontology_skills = []
+    try:
+        rows = conn.execute('SELECT skill FROM ontology').fetchall()
+        ontology_skills = [row['skill'] for row in rows]
+    finally:
+        conn.close()
+    return ontology_skills
 
 def extract_skills(normalized_text: str, raw_text: str) -> List[str]:
     skills_set: Set[str] = set()
