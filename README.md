@@ -102,4 +102,3 @@ pip install -r requirements.txt --upgrade
 ```
 
 ---
-**Built for the Stacko Hackathon**
