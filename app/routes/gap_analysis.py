@@ -66,6 +66,7 @@ def analyze_gaps(user_id):
                 "error": f"Role '{target_role}' not found",
                 "available_roles": available_roles
             }), 404
+
         
         # Organize skills by category
         role_requirements = {
@@ -296,3 +297,17 @@ def generate_recommendations(missing_required, missing_preferred, weak_skills, s
     
     conn.close()
     return recommendations
+
+
+@gap_analysis_bp.route('/roles', methods=['GET'])
+def get_roles():
+    """Get list of available roles"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT role_name FROM roles ORDER BY role_name")
+        roles = [row['role_name'] for row in cursor.fetchall()]
+        conn.close()
+        return jsonify({"roles": roles}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

@@ -11,7 +11,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///skillgenome.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
 db.init_app(app)
+from flask_cors import CORS
+CORS(app)
 
 # Register all blueprints
 app.register_blueprint(resume.bp, url_prefix="/api/resume")
