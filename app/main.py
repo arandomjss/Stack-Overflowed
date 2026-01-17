@@ -3,6 +3,7 @@ from app.api import resume
 from app.api.user_profile import profile_bp
 from app.api.integrations import integrations_bp
 from app.routes.gap_analysis import gap_analysis_bp
+from app.routes import auth_bp
 from app.models.database import db
 import os
 
@@ -14,14 +15,24 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 db.init_app(app)
+
+# Configure CORS properly for preflight requests
 from flask_cors import CORS
-CORS(app)
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:5173", "http://localhost:5174"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
+    }
+})
 
 # Register all blueprints
 app.register_blueprint(resume.bp, url_prefix="/api/resume")
 app.register_blueprint(profile_bp, url_prefix="/api")
 app.register_blueprint(integrations_bp, url_prefix="/api")
 app.register_blueprint(gap_analysis_bp, url_prefix="/api")
+app.register_blueprint(auth_bp, url_prefix="/auth")
 
 # Initialize database tables with SQLAlchemy
 with app.app_context():

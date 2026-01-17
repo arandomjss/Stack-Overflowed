@@ -4,8 +4,10 @@
 -- Users table: Core user information
 CREATE TABLE IF NOT EXISTS users (
     user_id VARCHAR(50) PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    name VARCHAR(100),
     email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(200),
     target_sector VARCHAR(50),  -- Healthcare, Agriculture, Urban
     target_role VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

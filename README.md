@@ -22,7 +22,7 @@ A powerful tool that extracts skills from resumes, suggests relevant courses, an
 ### 1. Clone & Install Dependencies
 ```bash
 git clone <repository-url>
-cd stackohackathon
+cd Stack-Overflowed
 pip install -r requirements.txt
 python -m spacy download en_core_web_sm
 ```
@@ -102,4 +102,3 @@ pip install -r requirements.txt --upgrade
 ```
 
 ---
-**Built for the Stacko Hackathon**
