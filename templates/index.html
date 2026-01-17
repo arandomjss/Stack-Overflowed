@@ -12,8 +12,9 @@
 <button class="tab active" onclick="switchTab(0)"> Profile</button>
 <button class="tab" onclick="switchTab(1)"> Skills</button>
 <button class="tab" onclick="switchTab(2)"> LinkedIn</button>
-<button class="tab" onclick="switchTab(3)"> Analysis</button>
-<button class="tab" onclick="switchTab(4)"> Resume</button>
+<button class="tab" onclick="switchTab(3)"> GitHub</button>
+<button class="tab" onclick="switchTab(4)"> Analysis</button>
+<button class="tab" onclick="switchTab(5)"> Resume</button>
 </div>
 <div id="t0" class="tab-content active">
 <div class="section"><h2>Create Profile</h2>
@@ -58,6 +59,16 @@
 </div><button onclick="importLI()">Import</button><div id="r5"></div></div>
 </div>
 <div id="t3" class="tab-content">
+<div class="section"><h2>Preview GitHub</h2>
+<p style="color:#666;margin-bottom:10px">Import real projects & skills from GitHub (Free API)</p>
+<div class="form-group"><label>GitHub Username *</label><input id="ghuser" placeholder="torvalds"></div>
+<button onclick="previewGH()">Preview</button><div id="r9"></div></div>
+<div class="section"><h2>Import from GitHub</h2>
+<div class="form-group"><label>User ID *</label><input id="ghid"></div>
+<div class="form-group"><label>GitHub Username *</label><input id="ghuser2" placeholder="torvalds"></div>
+<button onclick="importGH()">Import</button><div id="r10"></div></div>
+</div>
+<div id="t4" class="tab-content">
 <div class="section"><h2>Gap Analysis</h2>
 <div class="form-group"><label>User ID *</label><input id="aid"></div>
 <div class="grid">
@@ -70,7 +81,7 @@
 <div class="form-group"><label>User ID</label><input id="hid"></div>
 <button onclick="viewHistory()">View History</button><div id="r7"></div></div>
 </div>
-<div id="t4" class="tab-content">
+<div id="t5" class="tab-content">
 <div class="section"><h2>Resume Analysis</h2>
 <div class="form-group"><label>Resume File</label><input type="file" id="rfile" accept=".pdf,.docx"></div>
 <div class="form-group"><label>Target Role *</label><input id="rrole" placeholder="data scientist"></div>
@@ -84,7 +95,7 @@ document.querySelectorAll(".tab-content").forEach((t,j)=>t.classList.toggle("act
 function setUser(id,name,role,sector){u={id,name,role,sector};document.getElementById("userInfo").classList.add("show");
 document.getElementById("uId").textContent=id;document.getElementById("uName").textContent=name;
 document.getElementById("uRole").textContent=role;document.getElementById("uSector").textContent=sector;
-["vid","sid","vsid","liid","aid","hid"].forEach(x=>document.getElementById(x).value=id);}
+["vid","sid","vsid","liid","ghid","aid","hid"].forEach(x=>document.getElementById(x).value=id);}
 function showR(id,data,ok=1){document.getElementById(id).innerHTML=`<div class="result ${ok?"success":"error"}">
 <h3>${ok?" Success":" Error"}</h3><pre>${JSON.stringify(data,null,2)}</pre></div>`;}
 async function createProfile(){const d={name:document.getElementById("name").value,
@@ -121,6 +132,22 @@ async function importLI(){const id=document.getElementById("liid").value||u?.id;
 if(!id)return alert("Enter User ID");const d={user_id:id,import_type:document.getElementById("litype").value,access_token:"demo_token"};
 try{const r=await fetch(`${API}/import/linkedin`,{method:"POST",headers:{"Content-Type":"application/json"},
 body:JSON.stringify(d)});const j=await r.json();showR("r5",j,r.ok);}catch(e){showR("r5",{error:e.message},0);}}
+async function previewGH(){const user=document.getElementById("ghuser").value;
+if(!user)return alert("Enter GitHub username");try{const r=await fetch(`${API}/import/github/preview`,
+{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({github_username:user})});
+const j=await r.json();if(r.ok){const h=`<div class="result success"><h3> GitHub Preview</h3>
+<p><strong>Projects:</strong> ${j.counts.projects} | <strong>Skills:</strong> ${j.counts.skills}</p>
+<h4 style="margin-top:10px">Skills</h4>${j.preview.skills.map(s=>{const c=s.confidence>=0.7?"h":s.confidence>=0.4?"m":"l";
+return`<span class="badge">${s.name}<span class="conf ${c}">${(s.confidence*100).toFixed(0)}%</span></span>`;}).join("")}
+<h4 style="margin-top:10px">Top Projects</h4>${j.preview.projects.slice(0,5).map(p=>
+`<div style="background:#f8f9fa;padding:8px;margin:5px 0;border-radius:5px"><strong>${p.name}</strong> (${p.language}) ⭐ ${p.stars}<br>
+<small style="color:#666">${p.description}</small></div>`).join("")}</div>`;document.getElementById("r9").innerHTML=h;}
+else showR("r9",j,0);}catch(e){showR("r9",{error:e.message},0);}}
+async function importGH(){const id=document.getElementById("ghid").value||u?.id;
+const user=document.getElementById("ghuser2").value;if(!id||!user)return alert("Enter User ID and GitHub username");
+const d={user_id:id,github_username:user};try{const r=await fetch(`${API}/import/github`,
+{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)});
+const j=await r.json();showR("r10",j,r.ok);}catch(e){showR("r10",{error:e.message},0);}}
 async function runAnalysis(){const id=document.getElementById("aid").value||u?.id;
 if(!id)return alert("Enter User ID");const d={target_role:document.getElementById("arole").value,
 target_sector:document.getElementById("asector").value};try{const r=await fetch(`${API}/gap-analysis/${id}`,

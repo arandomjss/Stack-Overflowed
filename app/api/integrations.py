@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app.integrations.linkedin import LinkedInIntegration
+from app.integrations.github import import_github_projects, import_github_skills
 from app.database import get_db_connection
 import json
 from datetime import datetime
@@ -149,4 +150,153 @@ def preview_linkedin_import():
         return jsonify({
             "error": str(e),
             "message": "Failed to preview LinkedIn data"
+        }), 500
+
+
+@integrations_bp.route('/import/github', methods=['POST'])
+def import_from_github():
+    """
+    Import projects and skills from GitHub (REAL API - Free)
+    
+    Request body:
+    {
+        "user_id": "uuid-string",
+        "github_username": "username"
+    }
+    """
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        github_username = data.get('github_username')
+        
+        if not user_id or not github_username:
+            return jsonify({"error": "user_id and github_username are required"}), 400
+        
+        # Verify user exists
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+        user = cursor.fetchone()
+        if not user:
+            conn.close()
+            return jsonify({"error": "User not found"}), 404
+        
+        # Import projects from GitHub
+        github_data = import_github_projects(github_username)
+        
+        if 'error' in github_data and not github_data['projects']:
+            conn.close()
+            return jsonify({
+                "error": github_data['error'],
+                "imported": {"projects": 0, "skills": 0}
+            }), 400
+        
+        # Import skills
+        github_skills = import_github_skills(github_username)
+        
+        imported_projects = 0
+        imported_skills = 0
+        
+        # Insert projects
+        for project in github_data['projects']:
+            try:
+                cursor.execute("""
+                    INSERT INTO user_projects 
+                    (user_id, project_name, description, sector, skills_used, github_url, date_completed)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    user_id,
+                    project['name'],
+                    project['description'],
+                    user.get('target_sector', 'Tech'),
+                    json.dumps([project['language']] + project['topics']),
+                    project['url'],
+                    project['updated_at']
+                ))
+                imported_projects += 1
+            except Exception as e:
+                # Skip duplicates
+                continue
+        
+        # Insert skills
+        for skill in github_skills:
+            try:
+                cursor.execute("""
+                    INSERT INTO user_skills 
+                    (user_id, skill_name, sector_context, confidence, source, evidence)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    user_id,
+                    skill['name'],
+                    f"GitHub: {skill['evidence']}",
+                    skill['confidence'],
+                    'github',
+                    json.dumps([skill['evidence']])
+                ))
+                imported_skills += 1
+            except Exception as e:
+                # Skip duplicates
+                continue
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            "status": "success",
+            "imported": {
+                "projects": imported_projects,
+                "skills": imported_skills
+            },
+            "total_repos": github_data.get('total_repos', 0),
+            "message": f"Imported {imported_projects} projects and {imported_skills} skills from GitHub"
+        }), 200
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "error": str(e),
+            "message": "Failed to import GitHub data"
+        }), 500
+
+
+@integrations_bp.route('/import/github/preview', methods=['POST'])
+def preview_github_data():
+    """
+    Preview what would be imported from GitHub before importing
+    """
+    try:
+        data = request.json
+        github_username = data.get('github_username')
+        
+        if not github_username:
+            return jsonify({"error": "github_username is required"}), 400
+        
+        github_data = import_github_projects(github_username)
+        github_skills = import_github_skills(github_username)
+        
+        if 'error' in github_data and not github_data['projects']:
+            return jsonify({
+                "error": github_data['error'],
+                "preview": {"projects": [], "skills": []}
+            }), 400
+        
+        return jsonify({
+            "status": "success",
+            "preview": {
+                "projects": github_data['projects'],
+                "skills": github_skills,
+                "total_repos": github_data.get('total_repos', 0)
+            },
+            "counts": {
+                "projects": len(github_data['projects']),
+                "skills": len(github_skills)
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "error": str(e),
+            "message": "Failed to preview GitHub data"
         }), 500
