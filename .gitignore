@@ -9,3 +9,4 @@ __pycache__/
 .vscode/
 # Exclude sensitive configuration files
 backend/config.py
+
