@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Analysis API Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .step {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .step.hidden {
+            display: none;
+        }
+
+        .step h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input[type="file"],
+        select,
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="file"]:focus,
+        select:focus,
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        input[type="number"] {
+            width: 100px;
+            display: inline-block;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        button {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            margin-left: 10px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .results {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .result-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .skills-input-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            background: white;
+        }
+
+        .skill-input-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .skill-input-row .skill-name {
+            flex: 1;
+            font-weight: 600;
+            color: #333;
+            margin-right: 15px;
+        }
+
+        .skill-input-row .confidence-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .skill-item {
+            display: inline-block;
+            margin: 5px;
+            padding: 8px 15px;
+            background: white;
+            border-radius: 20px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .skill-item .name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .skill-item .confidence {
+            color: #667eea;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+
+        .phase {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+        }
+
+        .phase h4 {
+            color: #764ba2;
+            margin-bottom: 10px;
+        }
+
+        .phase-skill {
+            margin: 8px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .course-link {
+            display: block;
+            margin: 5px 0;
+            padding: 8px;
+            background: white;
+            border-radius: 5px;
+            text-decoration: none;
+            color: #667eea;
+            transition: background 0.2s;
+        }
+
+        .course-link:hover {
+            background: #e8eaf6;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #c33;
+        }
+
+        .json-view {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>📄 Resume Analysis API</h1>
+        <p class="subtitle">Upload your resume, set confidence scores, and get your learning roadmap</p>
+
+        <div class="step" id="step1">
+            <h2>Step 1: Upload Resume</h2>
+            <form id="extractForm">
+                <div class="form-group">
+                    <label for="file">Resume File (PDF or DOCX)</label>
+                    <input type="file" id="file" name="file" accept=".pdf,.docx" required>
+                    <div class="help-text">Select a PDF or DOCX resume file</div>
+                </div>
+
+                <button type="submit" id="extractBtn">Extract Skills</button>
+            </form>
+        </div>
+
+        <div class="step hidden" id="step2">
+            <h2>Step 2: Set Confidence Scores</h2>
+            <p style="margin-bottom: 15px; color: #666;">Please set confidence scores (0-100%) for each extracted skill:
+            </p>
+
+            <div class="form-group">
+                <label for="target_role">Target Role</label>
+                <select id="target_role" name="target_role" required>
+                    <option value="">Select a role...</option>
+                    <option value="data scientist">Data Scientist</option>
+                    <option value="software engineer">Software Engineer</option>
+                    <option value="ml engineer">ML Engineer</option>
+                    <option value="backend developer">Backend Developer</option>
+                    <option value="frontend developer">Frontend Developer</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Skills with Confidence Scores</label>
+                <div class="skills-input-container" id="skillsInputContainer"></div>
+            </div>
+
+            <button type="button" id="generateBtn">Generate Roadmap</button>
+            <button type="button" class="btn-secondary" id="backBtn">Back</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <p>⏳ Processing...</p>
+        </div>
+
+        <div class="error" id="error" style="display: none;"></div>
+
+        <div class="results" id="results">
+            <div class="result-section">
+                <h3>🎯 Your Skills</h3>
+                <div id="skillsList"></div>
+            </div>
+
+            <div class="result-section">
+                <h3>🗺️ Learning Roadmap</h3>
+                <div id="roadmap"></div>
+            </div>
+
+            <div class="result-section">
+                <h3>📋 Raw JSON Response</h3>
+                <pre class="json-view" id="jsonResponse"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let extractedSkills = [];
+        let skillsData = {};
+
+        document.getElementById('extractForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const fileInput = document.getElementById('file');
+            const extractBtn = document.getElementById('extractBtn');
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+
+            if (!fileInput.files[0]) {
+                showError('Please select a file');
+                return;
+            }
+
+            extractBtn.disabled = true;
+            loading.classList.add('show');
+            error.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/resume/extract', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showError(data.error || 'An error occurred');
+                    return;
+                }
+
+                extractedSkills = data.extracted_skills || [];
+                if (extractedSkills.length === 0) {
+                    showError('No skills extracted from resume');
+                    return;
+                }
+
+                showStep2();
+
+            } catch (err) {
+                showError('Network error: ' + err.message);
+            } finally {
+                extractBtn.disabled = false;
+                loading.classList.remove('show');
+            }
+        });
+
+        function showStep2() {
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
+
+            const container = document.getElementById('skillsInputContainer');
+            container.innerHTML = '';
+
+            extractedSkills.forEach((skill, index) => {
+                const row = document.createElement('div');
+                row.className = 'skill-input-row';
+                row.innerHTML = `
+                    <span class="skill-name">${skill}</span>
+                    <div class="confidence-input">
+                        <input type="number" 
+                               id="skill_${index}" 
+                               min="0" 
+                               max="100" 
+                               value="50" 
+                               required
+                               onchange="updateSkillScore('${skill}', this.value)">
+                        <span>%</span>
+                    </div>
+                `;
+                container.appendChild(row);
+                skillsData[skill] = 0.5;
+            });
+        }
+
+        function updateSkillScore(skill, value) {
+            skillsData[skill] = parseFloat(value) / 100;
+        }
+
+        document.getElementById('backBtn').addEventListener('click', () => {
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step1').classList.remove('hidden');
+            document.getElementById('results').classList.remove('show');
+        });
+
+        document.getElementById('generateBtn').addEventListener('click', async () => {
+            const targetRole = document.getElementById('target_role').value;
+            if (!targetRole) {
+                showError('Please select a target role');
+                return;
+            }
+
+            const skillsWithScores = Object.keys(skillsData).map(skill => ({
+                name: skill,
+                confidence: skillsData[skill]
+            }));
+
+            const generateBtn = document.getElementById('generateBtn');
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const results = document.getElementById('results');
+
+            generateBtn.disabled = true;
+            loading.classList.add('show');
+            error.style.display = 'none';
+            results.classList.remove('show');
+
+            try {
+                const formData = new FormData();
+                formData.append('target_role', targetRole);
+                formData.append('skills_with_scores', JSON.stringify(skillsWithScores));
+
+                const response = await fetch('/resume/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showError(data.error || 'An error occurred');
+                    return;
+                }
+
+                displayResults(data, skillsWithScores);
+
+            } catch (err) {
+                showError('Network error: ' + err.message);
+            } finally {
+                generateBtn.disabled = false;
+                loading.classList.remove('show');
+            }
+        });
+
+        function showError(message) {
+            const error = document.getElementById('error');
+            error.textContent = '❌ ' + message;
+            error.style.display = 'block';
+        }
+
+        function displayResults(data, skillsWithScores) {
+            const results = document.getElementById('results');
+            const skillsList = document.getElementById('skillsList');
+            const roadmap = document.getElementById('roadmap');
+            const jsonResponse = document.getElementById('jsonResponse');
+
+            skillsList.innerHTML = '';
+            if (skillsWithScores && skillsWithScores.length > 0) {
+                skillsWithScores.sort((a, b) => b.confidence - a.confidence);
+                skillsWithScores.forEach(skill => {
+                    const skillEl = document.createElement('div');
+                    skillEl.className = 'skill-item';
+                    skillEl.innerHTML = `<span class="name">${skill.name}</span> <span class="confidence">(${(skill.confidence * 100).toFixed(0)}%)</span>`;
+                    skillsList.appendChild(skillEl);
+                });
+            } else {
+                skillsList.innerHTML = '<p>No skills found</p>';
+            }
+
+            roadmap.innerHTML = '';
+            if (data.roadmap && data.roadmap.length > 0) {
+                data.roadmap.forEach(phase => {
+                    const phaseEl = document.createElement('div');
+                    phaseEl.className = 'phase';
+                    phaseEl.innerHTML = `<h4>${phase.phase.charAt(0).toUpperCase() + phase.phase.slice(1)}</h4>`;
+
+                    if (phase.skills && phase.skills.length > 0) {
+                        phase.skills.forEach(skill => {
+                            const skillEl = document.createElement('div');
+                            skillEl.className = 'phase-skill';
+                            skillEl.innerHTML = `<strong>${skill.name}</strong>`;
+
+                            if (skill.courses && skill.courses.length > 0) {
+                                const coursesDiv = document.createElement('div');
+                                coursesDiv.style.marginTop = '8px';
+                                skill.courses.forEach(course => {
+                                    const courseLink = document.createElement('a');
+                                    courseLink.href = course.url;
+                                    courseLink.target = '_blank';
+                                    courseLink.className = 'course-link';
+                                    courseLink.textContent = `📚 ${course.platform}: ${course.title}`;
+                                    coursesDiv.appendChild(courseLink);
+                                });
+                                skillEl.appendChild(coursesDiv);
+                            }
+
+                            phaseEl.appendChild(skillEl);
+                        });
+                    } else {
+                        phaseEl.innerHTML += '<p>No skills in this phase</p>';
+                    }
+
+                    roadmap.appendChild(phaseEl);
+                });
+            } else {
+                roadmap.innerHTML = '<p>No roadmap generated</p>';
+            }
+
+            jsonResponse.textContent = JSON.stringify(data, null, 2);
+            results.classList.add('show');
+        }
+    </script>
+</body>
+
+</html>

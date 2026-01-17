@@ -1,552 +1,144 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resume Analysis API Tester</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            padding: 30px;
-        }
-
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-
-        .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 30px;
-        }
-
-        .step {
-            margin-bottom: 30px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            border-left: 4px solid #667eea;
-        }
-
-        .step.hidden {
-            display: none;
-        }
-
-        .step h2 {
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 20px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
-        }
-
-        input[type="file"],
-        select,
-        input[type="number"] {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-
-        input[type="file"]:focus,
-        select:focus,
-        input[type="number"]:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        input[type="number"] {
-            width: 100px;
-            display: inline-block;
-        }
-
-        .help-text {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-        }
-
-        button {
-            padding: 15px 30px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            margin-left: 10px;
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 20px;
-            color: #667eea;
-        }
-
-        .loading.show {
-            display: block;
-        }
-
-        .results {
-            margin-top: 30px;
-            display: none;
-        }
-
-        .results.show {
-            display: block;
-        }
-
-        .result-section {
-            margin-bottom: 25px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            border-left: 4px solid #667eea;
-        }
-
-        .result-section h3 {
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 18px;
-        }
-
-        .skills-input-container {
-            max-height: 400px;
-            overflow-y: auto;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 15px;
-            background: white;
-        }
-
-        .skill-input-row {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 5px;
-        }
-
-        .skill-input-row .skill-name {
-            flex: 1;
-            font-weight: 600;
-            color: #333;
-            margin-right: 15px;
-        }
-
-        .skill-input-row .confidence-input {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .skill-item {
-            display: inline-block;
-            margin: 5px;
-            padding: 8px 15px;
-            background: white;
-            border-radius: 20px;
-            border: 1px solid #e0e0e0;
-        }
-
-        .skill-item .name {
-            font-weight: 600;
-            color: #333;
-        }
-
-        .skill-item .confidence {
-            color: #667eea;
-            font-size: 12px;
-            margin-left: 8px;
-        }
-
-        .phase {
-            margin-bottom: 15px;
-            padding: 15px;
-            background: white;
-            border-radius: 8px;
-        }
-
-        .phase h4 {
-            color: #764ba2;
-            margin-bottom: 10px;
-        }
-
-        .phase-skill {
-            margin: 8px 0;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 5px;
-        }
-
-        .course-link {
-            display: block;
-            margin: 5px 0;
-            padding: 8px;
-            background: white;
-            border-radius: 5px;
-            text-decoration: none;
-            color: #667eea;
-            transition: background 0.2s;
-        }
-
-        .course-link:hover {
-            background: #e8eaf6;
-        }
-
-        .error {
-            background: #fee;
-            color: #c33;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            border-left: 4px solid #c33;
-        }
-
-        .json-view {
-            background: #1e1e1e;
-            color: #d4d4d4;
-            padding: 15px;
-            border-radius: 8px;
-            overflow-x: auto;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-    </style>
-</head>
-
-<body>
-    <div class="container">
-        <h1>📄 Resume Analysis API</h1>
-        <p class="subtitle">Upload your resume, set confidence scores, and get your learning roadmap</p>
-
-        <div class="step" id="step1">
-            <h2>Step 1: Upload Resume</h2>
-            <form id="extractForm">
-                <div class="form-group">
-                    <label for="file">Resume File (PDF or DOCX)</label>
-                    <input type="file" id="file" name="file" accept=".pdf,.docx" required>
-                    <div class="help-text">Select a PDF or DOCX resume file</div>
-                </div>
-
-                <button type="submit" id="extractBtn">Extract Skills</button>
-            </form>
-        </div>
-
-        <div class="step hidden" id="step2">
-            <h2>Step 2: Set Confidence Scores</h2>
-            <p style="margin-bottom: 15px; color: #666;">Please set confidence scores (0-100%) for each extracted skill:
-            </p>
-
-            <div class="form-group">
-                <label for="target_role">Target Role</label>
-                <select id="target_role" name="target_role" required>
-                    <option value="">Select a role...</option>
-                    <option value="data scientist">Data Scientist</option>
-                    <option value="software engineer">Software Engineer</option>
-                    <option value="ml engineer">ML Engineer</option>
-                    <option value="backend developer">Backend Developer</option>
-                    <option value="frontend developer">Frontend Developer</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>Skills with Confidence Scores</label>
-                <div class="skills-input-container" id="skillsInputContainer"></div>
-            </div>
-
-            <button type="button" id="generateBtn">Generate Roadmap</button>
-            <button type="button" class="btn-secondary" id="backBtn">Back</button>
-        </div>
-
-        <div class="loading" id="loading">
-            <p>⏳ Processing...</p>
-        </div>
-
-        <div class="error" id="error" style="display: none;"></div>
-
-        <div class="results" id="results">
-            <div class="result-section">
-                <h3>🎯 Your Skills</h3>
-                <div id="skillsList"></div>
-            </div>
-
-            <div class="result-section">
-                <h3>🗺️ Learning Roadmap</h3>
-                <div id="roadmap"></div>
-            </div>
-
-            <div class="result-section">
-                <h3>📋 Raw JSON Response</h3>
-                <pre class="json-view" id="jsonResponse"></pre>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        let extractedSkills = [];
-        let skillsData = {};
-
-        document.getElementById('extractForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const fileInput = document.getElementById('file');
-            const extractBtn = document.getElementById('extractBtn');
-            const loading = document.getElementById('loading');
-            const error = document.getElementById('error');
-
-            if (!fileInput.files[0]) {
-                showError('Please select a file');
-                return;
-            }
-
-            extractBtn.disabled = true;
-            loading.classList.add('show');
-            error.style.display = 'none';
-
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-
-            try {
-                const response = await fetch('/resume/extract', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    showError(data.error || 'An error occurred');
-                    return;
-                }
-
-                extractedSkills = data.extracted_skills || [];
-                if (extractedSkills.length === 0) {
-                    showError('No skills extracted from resume');
-                    return;
-                }
-
-                showStep2();
-
-            } catch (err) {
-                showError('Network error: ' + err.message);
-            } finally {
-                extractBtn.disabled = false;
-                loading.classList.remove('show');
-            }
-        });
-
-        function showStep2() {
-            document.getElementById('step1').classList.add('hidden');
-            document.getElementById('step2').classList.remove('hidden');
-
-            const container = document.getElementById('skillsInputContainer');
-            container.innerHTML = '';
-
-            extractedSkills.forEach((skill, index) => {
-                const row = document.createElement('div');
-                row.className = 'skill-input-row';
-                row.innerHTML = `
-                    <span class="skill-name">${skill}</span>
-                    <div class="confidence-input">
-                        <input type="number" 
-                               id="skill_${index}" 
-                               min="0" 
-                               max="100" 
-                               value="50" 
-                               required
-                               onchange="updateSkillScore('${skill}', this.value)">
-                        <span>%</span>
-                    </div>
-                `;
-                container.appendChild(row);
-                skillsData[skill] = 0.5;
-            });
-        }
-
-        function updateSkillScore(skill, value) {
-            skillsData[skill] = parseFloat(value) / 100;
-        }
-
-        document.getElementById('backBtn').addEventListener('click', () => {
-            document.getElementById('step2').classList.add('hidden');
-            document.getElementById('step1').classList.remove('hidden');
-            document.getElementById('results').classList.remove('show');
-        });
-
-        document.getElementById('generateBtn').addEventListener('click', async () => {
-            const targetRole = document.getElementById('target_role').value;
-            if (!targetRole) {
-                showError('Please select a target role');
-                return;
-            }
-
-            const skillsWithScores = Object.keys(skillsData).map(skill => ({
-                name: skill,
-                confidence: skillsData[skill]
-            }));
-
-            const generateBtn = document.getElementById('generateBtn');
-            const loading = document.getElementById('loading');
-            const error = document.getElementById('error');
-            const results = document.getElementById('results');
-
-            generateBtn.disabled = true;
-            loading.classList.add('show');
-            error.style.display = 'none';
-            results.classList.remove('show');
-
-            try {
-                const formData = new FormData();
-                formData.append('target_role', targetRole);
-                formData.append('skills_with_scores', JSON.stringify(skillsWithScores));
-
-                const response = await fetch('/resume/analyze', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    showError(data.error || 'An error occurred');
-                    return;
-                }
-
-                displayResults(data, skillsWithScores);
-
-            } catch (err) {
-                showError('Network error: ' + err.message);
-            } finally {
-                generateBtn.disabled = false;
-                loading.classList.remove('show');
-            }
-        });
-
-        function showError(message) {
-            const error = document.getElementById('error');
-            error.textContent = '❌ ' + message;
-            error.style.display = 'block';
-        }
-
-        function displayResults(data, skillsWithScores) {
-            const results = document.getElementById('results');
-            const skillsList = document.getElementById('skillsList');
-            const roadmap = document.getElementById('roadmap');
-            const jsonResponse = document.getElementById('jsonResponse');
-
-            skillsList.innerHTML = '';
-            if (skillsWithScores && skillsWithScores.length > 0) {
-                skillsWithScores.sort((a, b) => b.confidence - a.confidence);
-                skillsWithScores.forEach(skill => {
-                    const skillEl = document.createElement('div');
-                    skillEl.className = 'skill-item';
-                    skillEl.innerHTML = `<span class="name">${skill.name}</span> <span class="confidence">(${(skill.confidence * 100).toFixed(0)}%)</span>`;
-                    skillsList.appendChild(skillEl);
-                });
-            } else {
-                skillsList.innerHTML = '<p>No skills found</p>';
-            }
-
-            roadmap.innerHTML = '';
-            if (data.roadmap && data.roadmap.length > 0) {
-                data.roadmap.forEach(phase => {
-                    const phaseEl = document.createElement('div');
-                    phaseEl.className = 'phase';
-                    phaseEl.innerHTML = `<h4>${phase.phase.charAt(0).toUpperCase() + phase.phase.slice(1)}</h4>`;
-
-                    if (phase.skills && phase.skills.length > 0) {
-                        phase.skills.forEach(skill => {
-                            const skillEl = document.createElement('div');
-                            skillEl.className = 'phase-skill';
-                            skillEl.innerHTML = `<strong>${skill.name}</strong>`;
-
-                            if (skill.courses && skill.courses.length > 0) {
-                                const coursesDiv = document.createElement('div');
-                                coursesDiv.style.marginTop = '8px';
-                                skill.courses.forEach(course => {
-                                    const courseLink = document.createElement('a');
-                                    courseLink.href = course.url;
-                                    courseLink.target = '_blank';
-                                    courseLink.className = 'course-link';
-                                    courseLink.textContent = `📚 ${course.platform}: ${course.title}`;
-                                    coursesDiv.appendChild(courseLink);
-                                });
-                                skillEl.appendChild(coursesDiv);
-                            }
-
-                            phaseEl.appendChild(skillEl);
-                        });
-                    } else {
-                        phaseEl.innerHTML += '<p>No skills in this phase</p>';
-                    }
-
-                    roadmap.appendChild(phaseEl);
-                });
-            } else {
-                roadmap.innerHTML = '<p>No roadmap generated</p>';
-            }
-
-            jsonResponse.textContent = JSON.stringify(data, null, 2);
-            results.classList.add('show');
-        }
-    </script>
-</body>
-
-</html>
+﻿<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>SkillGenome Test</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;padding:20px}.container{max-width:1200px;margin:0 auto;background:#fff;border-radius:15px;box-shadow:0 10px 40px rgba(0,0,0,.2);padding:30px}h1{color:#333;text-align:center;font-size:2em;margin-bottom:10px}.subtitle{text-align:center;color:#666;margin-bottom:20px}.user-info{background:#e7f3ff;padding:15px;border-radius:8px;margin-bottom:20px;display:none}.user-info.show{display:block}.tabs{display:flex;gap:5px;margin-bottom:20px;border-bottom:2px solid #e0e0e0;flex-wrap:wrap}.tab{padding:10px 20px;background:none;border:none;border-bottom:3px solid transparent;cursor:pointer;font-size:14px;font-weight:600;color:#666}.tab:hover{color:#667eea}.tab.active{color:#667eea;border-bottom-color:#667eea}.tab-content{display:none}.tab-content.active{display:block}.section{background:#f8f9fa;padding:20px;border-radius:10px;margin-bottom:15px;border-left:4px solid #667eea}.section h2{color:#333;margin-bottom:15px;font-size:1.3em}.form-group{margin-bottom:12px}label{display:block;margin-bottom:5px;color:#555;font-weight:600;font-size:13px}input,select,textarea{width:100%;padding:10px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px}input:focus,select:focus{outline:none;border-color:#667eea}button{background:#667eea;color:#fff;border:none;padding:10px 25px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;margin-top:5px}button:hover{background:#5568d3}button:disabled{background:#ccc;cursor:not-allowed}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.result{margin-top:12px;padding:12px;background:#fff;border-radius:8px;border-left:4px solid #667eea}.result.success{border-left-color:#28a745}.result.error{border-left-color:#dc3545}.result pre{background:#f4f4f4;padding:10px;border-radius:5px;overflow-x:auto;font-size:11px;max-height:300px;overflow-y:auto}.score{font-size:3em;font-weight:bold;color:#667eea;text-align:center;margin:15px 0}.rec{background:#fff;padding:12px;margin:8px 0;border-radius:6px;border-left:4px solid #ffc107}.rec.high{border-left-color:#dc3545}.rec.medium{border-left-color:#ffc107}.rec.low{border-left-color:#28a745}.badge{display:inline-block;background:#fff;padding:6px 12px;margin:4px;border-radius:15px;border:2px solid #667eea;font-size:12px}.conf{display:inline-block;padding:2px 6px;border-radius:8px;font-size:10px;margin-left:4px;font-weight:600}.conf.h{background:#d4edda;color:#155724}.conf.m{background:#fff3cd;color:#856404}.conf.l{background:#f8d7da;color:#721c24}@media(max-width:768px){.grid{grid-template-columns:1fr}}</style>
+</head><body><div class="container">
+<h1> SkillGenome</h1>
+<p class="subtitle">Skill Intelligence Platform - Test Interface</p>
+<div id="userInfo" class="user-info">
+<strong>User:</strong> <span id="uName"></span> (<code id="uId"></code>)<br>
+<strong>Target:</strong> <span id="uRole"></span> in <span id="uSector"></span>
+</div>
+<div class="tabs">
+<button class="tab active" onclick="switchTab(0)"> Profile</button>
+<button class="tab" onclick="switchTab(1)"> Skills</button>
+<button class="tab" onclick="switchTab(2)"> LinkedIn</button>
+<button class="tab" onclick="switchTab(3)"> Analysis</button>
+<button class="tab" onclick="switchTab(4)"> Resume</button>
+</div>
+<div id="t0" class="tab-content active">
+<div class="section"><h2>Create Profile</h2>
+<div class="grid">
+<div class="form-group"><label>Name *</label><input id="name" placeholder="Alice Johnson"></div>
+<div class="form-group"><label>Email *</label><input id="email" placeholder="alice@uni.edu"></div>
+</div><div class="grid">
+<div class="form-group"><label>Sector *</label>
+<select id="sector"><option>Healthcare</option><option>Agriculture</option><option>Urban</option></select>
+</div>
+<div class="form-group"><label>Role *</label><input id="role" placeholder="data scientist"></div>
+</div><button onclick="createProfile()">Create Profile</button>
+<div id="r0"></div></div>
+<div class="section"><h2>View Profile</h2>
+<div class="form-group"><label>User ID</label><input id="vid"></div>
+<button onclick="viewProfile()">View Profile</button><div id="r1"></div></div>
+</div>
+<div id="t1" class="tab-content">
+<div class="section"><h2>Add Skill</h2>
+<div class="form-group"><label>User ID</label><input id="sid"></div>
+<div class="grid">
+<div class="form-group"><label>Skill *</label><input id="sname" placeholder="Python"></div>
+<div class="form-group"><label>Context *</label><input id="sctx" placeholder="Healthcare Data"></div>
+</div><div class="grid">
+<div class="form-group"><label>Confidence (0-1)</label><input type="number" id="sconf" min="0" max="1" step="0.1" value="0.7"></div>
+<div class="form-group"><label>Source</label>
+<select id="ssrc"><option value="manual">Manual</option><option value="resume">Resume</option><option value="linkedin">LinkedIn</option><option value="course">Course</option></select>
+</div></div>
+<button onclick="addSkill()">Add Skill</button><div id="r2"></div></div>
+<div class="section"><h2>View Skills</h2>
+<div class="form-group"><label>User ID</label><input id="vsid"></div>
+<button onclick="viewSkills()">View Skills</button><div id="r3"></div></div>
+</div>
+<div id="t2" class="tab-content">
+<div class="section"><h2>Preview LinkedIn</h2>
+<p style="color:#666;margin-bottom:10px">Mock LinkedIn data preview</p>
+<button onclick="previewLI()">Preview</button><div id="r4"></div></div>
+<div class="section"><h2>Import from LinkedIn</h2>
+<div class="form-group"><label>User ID *</label><input id="liid"></div>
+<div class="form-group"><label>Import Type</label>
+<select id="litype"><option value="all">All</option><option value="skills">Skills Only</option><option value="courses">Courses Only</option></select>
+</div><button onclick="importLI()">Import</button><div id="r5"></div></div>
+</div>
+<div id="t3" class="tab-content">
+<div class="section"><h2>Gap Analysis</h2>
+<div class="form-group"><label>User ID *</label><input id="aid"></div>
+<div class="grid">
+<div class="form-group"><label>Role *</label><input id="arole" placeholder="data scientist"></div>
+<div class="form-group"><label>Sector</label>
+<select id="asector"><option>Healthcare</option><option>Agriculture</option><option>Urban</option></select>
+</div></div>
+<button onclick="runAnalysis()">Analyze</button><div id="r6"></div></div>
+<div class="section"><h2>Analysis History</h2>
+<div class="form-group"><label>User ID</label><input id="hid"></div>
+<button onclick="viewHistory()">View History</button><div id="r7"></div></div>
+</div>
+<div id="t4" class="tab-content">
+<div class="section"><h2>Resume Analysis</h2>
+<div class="form-group"><label>Resume File</label><input type="file" id="rfile" accept=".pdf,.docx"></div>
+<div class="form-group"><label>Target Role *</label><input id="rrole" placeholder="data scientist"></div>
+<button onclick="analyzeResume()">Analyze</button><div id="r8"></div></div>
+</div>
+</div>
+<script>
+const API="http://localhost:5000/api";let u=null;
+function switchTab(i){document.querySelectorAll(".tab").forEach((t,j)=>t.classList.toggle("active",j===i));
+document.querySelectorAll(".tab-content").forEach((t,j)=>t.classList.toggle("active",j===i));}
+function setUser(id,name,role,sector){u={id,name,role,sector};document.getElementById("userInfo").classList.add("show");
+document.getElementById("uId").textContent=id;document.getElementById("uName").textContent=name;
+document.getElementById("uRole").textContent=role;document.getElementById("uSector").textContent=sector;
+["vid","sid","vsid","liid","aid","hid"].forEach(x=>document.getElementById(x).value=id);}
+function showR(id,data,ok=1){document.getElementById(id).innerHTML=`<div class="result ${ok?"success":"error"}">
+<h3>${ok?" Success":" Error"}</h3><pre>${JSON.stringify(data,null,2)}</pre></div>`;}
+async function createProfile(){const d={name:document.getElementById("name").value,
+email:document.getElementById("email").value,target_sector:document.getElementById("sector").value,
+target_role:document.getElementById("role").value};try{const r=await fetch(`${API}/profile`,
+{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)});
+const j=await r.json();showR("r0",j,r.ok);if(r.ok)setUser(j.user_id,d.name,d.target_role,d.target_sector);}
+catch(e){showR("r0",{error:e.message},0);}}
+async function viewProfile(){const id=document.getElementById("vid").value||u?.id;
+if(!id)return alert("Enter User ID");try{const r=await fetch(`${API}/profile/${id}`);
+const j=await r.json();if(r.ok){const h=`<div class="result success"><h3> Profile</h3>
+<p><strong>Name:</strong> ${j.user.name}</p><p><strong>Email:</strong> ${j.user.email}</p>
+<p><strong>Target:</strong> ${j.user.target_role} (${j.user.target_sector})</p>
+<h4 style="margin-top:10px">Skills (${j.skills.length})</h4>
+${j.skills.slice(0,15).map(s=>{const c=s.confidence>=0.7?"h":s.confidence>=0.4?"m":"l";
+return`<span class="badge">${s.skill_name}<span class="conf ${c}">${(s.confidence*100).toFixed(0)}%</span></span>`;}).join("")}
+</div>`;document.getElementById("r1").innerHTML=h;}else showR("r1",j,0);}catch(e){showR("r1",{error:e.message},0);}}
+async function addSkill(){const id=document.getElementById("sid").value||u?.id;
+if(!id)return alert("Enter User ID");const d={skill_name:document.getElementById("sname").value,
+sector_context:document.getElementById("sctx").value,confidence:parseFloat(document.getElementById("sconf").value),
+source:document.getElementById("ssrc").value,evidence:[]};try{const r=await fetch(`${API}/profile/${id}/skills`,
+{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)});
+const j=await r.json();showR("r2",j,r.ok);}catch(e){showR("r2",{error:e.message},0);}}
+async function viewSkills(){const id=document.getElementById("vsid").value||u?.id;
+if(!id)return alert("Enter User ID");try{const r=await fetch(`${API}/profile/${id}/skills`);
+const j=await r.json();if(r.ok){const h=`<div class="result success"><h3> Skills (${j.total})</h3>
+${j.skills.map(s=>{const c=s.confidence>=0.7?"h":s.confidence>=0.4?"m":"l";
+return`<span class="badge">${s.skill_name}<span class="conf ${c}">${(s.confidence*100).toFixed(0)}%</span></span>`;}).join("")}
+</div>`;document.getElementById("r3").innerHTML=h;}else showR("r3",j,0);}catch(e){showR("r3",{error:e.message},0);}}
+async function previewLI(){try{const r=await fetch(`${API}/import/linkedin/preview`,
+{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({})});
+const j=await r.json();showR("r4",j,r.ok);}catch(e){showR("r4",{error:e.message},0);}}
+async function importLI(){const id=document.getElementById("liid").value||u?.id;
+if(!id)return alert("Enter User ID");const d={user_id:id,import_type:document.getElementById("litype").value,access_token:"demo_token"};
+try{const r=await fetch(`${API}/import/linkedin`,{method:"POST",headers:{"Content-Type":"application/json"},
+body:JSON.stringify(d)});const j=await r.json();showR("r5",j,r.ok);}catch(e){showR("r5",{error:e.message},0);}}
+async function runAnalysis(){const id=document.getElementById("aid").value||u?.id;
+if(!id)return alert("Enter User ID");const d={target_role:document.getElementById("arole").value,
+target_sector:document.getElementById("asector").value};try{const r=await fetch(`${API}/gap-analysis/${id}`,
+{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)});
+const j=await r.json();if(r.ok){const h=`<div class="result success"><h3> Gap Analysis</h3>
+<div class="score">${j.readiness_score}%</div><p style="text-align:center;color:#666;margin-bottom:15px">
+Readiness for ${j.target_role}</p><h4> Missing Required (${j.analysis.missing_required_skills.length})</h4>
+${j.analysis.missing_required_skills.map(s=>`<div class="rec high">${s.skill} - ${s.reason}</div>`).join("")||"<p>None!</p>"}
+<h4 style="margin-top:15px"> Recommendations (${j.recommendations.length})</h4>
+${j.recommendations.map(r=>`<div class="rec ${r.priority}"><strong>${r.action}</strong><br><small>${r.reason}</small></div>`).join("")}
+</div>`;document.getElementById("r6").innerHTML=h;}else showR("r6",j,0);}catch(e){showR("r6",{error:e.message},0);}}
+async function viewHistory(){const id=document.getElementById("hid").value||u?.id;
+if(!id)return alert("Enter User ID");try{const r=await fetch(`${API}/gap-analysis/${id}/history`);
+const j=await r.json();showR("r7",j,r.ok);}catch(e){showR("r7",{error:e.message},0);}}
+async function analyzeResume(){const f=document.getElementById("rfile").files[0];
+const role=document.getElementById("rrole").value;if(!f||!role)return alert("Select file and enter role");
+const fd=new FormData();fd.append("file",f);fd.append("target_role",role);
+try{const r=await fetch(`${API}/resume/analyze`,{method:"POST",body:fd});
+const j=await r.json();showR("r8",j,r.ok);}catch(e){showR("r8",{error:e.message},0);}}
+console.log("SkillGenome Ready!");
+</script></body></html>

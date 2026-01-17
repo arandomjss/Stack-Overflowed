@@ -35,39 +35,68 @@ def extract_skills_only():
 
 @bp.route("/analyze", methods=["POST"])
 def analyze_resume():
-    target_role = request.form.get("target_role")
-    if not target_role:
-        return jsonify({"error": "target_role is required"}), 400
+    """
+    Complete resume analysis - upload file and get analysis
+    Supports both file upload and pre-extracted skills
+    """
     
-    skills_with_scores = request.form.get("skills_with_scores")
-    if not skills_with_scores:
-        return jsonify({"error": "skills_with_scores is required. Please provide skills with confidence scores."}), 400
+    # Check if file is uploaded
+    if "file" in request.files and request.files["file"].filename:
+        file = request.files["file"]
+        
+        if not file.filename.lower().endswith(('.pdf', '.docx')):
+            return jsonify({"error": "File must be PDF or DOCX"}), 400
+        
+        # Extract and score skills from resume
+        content = file.read()
+        raw_text = extract_text(content, file.filename)
+        normalized_text = normalize_text(raw_text)
+        skills_list = extract_skills(normalized_text, raw_text)
+        
+        # Auto-score the extracted skills
+        scored_skills = score_skills(skills_list, raw_text)
+        
+        final_skills = [
+            {"name": skill.name, "confidence": skill.confidence}
+            for skill in scored_skills
+        ]
     
-    try:
-        skills_data = json.loads(skills_with_scores)
-        if not isinstance(skills_data, list):
-            return jsonify({"error": "skills_with_scores must be a JSON array"}), 400
+    # Or use pre-provided skills with scores
+    elif request.form.get("skills_with_scores"):
+        skills_with_scores = request.form.get("skills_with_scores")
         
-        final_skills = []
-        for item in skills_data:
-            if isinstance(item, dict) and "name" in item and "confidence" in item:
-                skill_name = item["name"].strip()
-                confidence = float(item["confidence"])
-                if 0.0 <= confidence <= 1.0:
-                    final_skills.append({
-                        "name": skill_name,
-                        "confidence": confidence
-                    })
-        
-        if not final_skills:
-            return jsonify({"error": "No valid skills provided"}), 400
-        
-        final_skills.sort(key=lambda x: x["confidence"], reverse=True)
-    except json.JSONDecodeError:
-        return jsonify({"error": "Invalid JSON in skills_with_scores"}), 400
-    except Exception as e:
-        return jsonify({"error": f"Error processing skills: {str(e)}"}), 400
+        try:
+            skills_data = json.loads(skills_with_scores)
+            if not isinstance(skills_data, list):
+                return jsonify({"error": "skills_with_scores must be a JSON array"}), 400
+            
+            final_skills = []
+            for item in skills_data:
+                if isinstance(item, dict) and "name" in item and "confidence" in item:
+                    skill_name = item["name"].strip()
+                    confidence = float(item["confidence"])
+                    if 0.0 <= confidence <= 1.0:
+                        final_skills.append({
+                            "name": skill_name,
+                            "confidence": confidence
+                        })
+            
+            if not final_skills:
+                return jsonify({"error": "No valid skills provided"}), 400
+            
+            final_skills.sort(key=lambda x: x["confidence"], reverse=True)
+        except json.JSONDecodeError:
+            return jsonify({"error": "Invalid JSON in skills_with_scores"}), 400
+        except Exception as e:
+            return jsonify({"error": f"Error processing skills: {str(e)}"}), 400
     
+    else:
+        return jsonify({"error": "Either 'file' or 'skills_with_scores' is required"}), 400
+    
+    # Get target role (optional)
+    target_role = request.form.get("target_role", "general")
+    
+    # Generate roadmap
     roadmap_phases = generate_roadmap(
         [Skill(name=s["name"], confidence=s["confidence"]) for s in final_skills],
         target_role
