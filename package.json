@@ -1,0 +1,9 @@
+{
+  "name": "stackohackathon",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start:py": "python src/main.py",
+    "start:js": "node src/index.js"
+  }
+}
