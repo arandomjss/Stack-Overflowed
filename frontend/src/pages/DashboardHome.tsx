@@ -1,8 +1,61 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Target, Award } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { TrendingUp, Target, Github } from 'lucide-react';
 
 const DashboardHome: React.FC = () => {
+    const apiBaseUrl = useMemo(
+        () => (import.meta as any)?.env?.VITE_API_BASE_URL || 'http://localhost:5000',
+        []
+    );
+
+    const [skillsTracked, setSkillsTracked] = useState<number | null>(null);
+    const [projectsImported, setProjectsImported] = useState<number | null>(null);
+    const [readinessScore, setReadinessScore] = useState<number | null>(null);
+
+    useEffect(() => {
+        const userId = localStorage.getItem('user_id');
+        if (!userId) {
+            setSkillsTracked(0);
+            setProjectsImported(0);
+            setReadinessScore(null);
+            return;
+        }
+
+        const controller = new AbortController();
+
+        (async () => {
+            try {
+                const res = await fetch(`${apiBaseUrl}/api/profile/${userId}`, { signal: controller.signal });
+                if (!res.ok) {
+                    setSkillsTracked(0);
+                    setProjectsImported(0);
+                    setReadinessScore(null);
+                    return;
+                }
+
+                const data = await res.json();
+
+                const skillsCount = Array.isArray(data?.skills) ? data.skills.length : 0;
+                const projectsCount = Array.isArray(data?.projects) ? data.projects.length : 0;
+                const readiness =
+                    typeof data?.latest_analysis?.readiness_score === 'number'
+                        ? data.latest_analysis.readiness_score
+                        : null;
+
+                setSkillsTracked(skillsCount);
+                setProjectsImported(projectsCount);
+                setReadinessScore(readiness);
+            } catch {
+                setSkillsTracked(0);
+                setProjectsImported(0);
+                setReadinessScore(null);
+            }
+        })();
+
+        return () => controller.abort();
+    }, [apiBaseUrl]);
+
     return (
         <div className="space-y-6">
             <motion.div
@@ -25,7 +78,7 @@ const DashboardHome: React.FC = () => {
                             <TrendingUp className="h-6 w-6 text-blue-400" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold">0</p>
+                            <p className="text-2xl font-bold">{skillsTracked ?? '—'}</p>
                             <p className="text-sm text-secondary">Skills Tracked</p>
                         </div>
                     </div>
@@ -42,7 +95,9 @@ const DashboardHome: React.FC = () => {
                             <Target className="h-6 w-6 text-violet-400" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold">--</p>
+                            <p className="text-2xl font-bold">
+                                {readinessScore == null ? '—' : `${Math.round(readinessScore)}%`}
+                            </p>
                             <p className="text-sm text-secondary">Readiness Score</p>
                         </div>
                     </div>
@@ -56,11 +111,11 @@ const DashboardHome: React.FC = () => {
                 >
                     <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-lg bg-green-500/20 flex items-center justify-center">
-                            <Award className="h-6 w-6 text-green-400" />
+                            <Github className="h-6 w-6 text-green-400" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold">0</p>
-                            <p className="text-sm text-secondary">Courses Suggested</p>
+                            <p className="text-2xl font-bold">{projectsImported ?? '—'}</p>
+                            <p className="text-sm text-secondary">Projects Imported</p>
                         </div>
                     </div>
                 </motion.div>
@@ -81,6 +136,12 @@ const DashboardHome: React.FC = () => {
                         <div>
                             <h3 className="font-semibold mb-1">Upload Your Resume</h3>
                             <p className="text-secondary text-sm">Let our AI extract your skills automatically</p>
+                            <Link
+                                to="/dashboard/upload"
+                                className="inline-block mt-2 text-sm text-primary hover:underline"
+                            >
+                                Go to Resume Upload
+                            </Link>
                         </div>
                     </div>
                     <div className="flex items-start gap-4">
@@ -88,8 +149,14 @@ const DashboardHome: React.FC = () => {
                             <span className="text-primary font-bold">2</span>
                         </div>
                         <div>
-                            <h3 className="font-semibold mb-1">Review Your Skills</h3>
-                            <p className="text-secondary text-sm">See what skills we detected and their confidence scores</p>
+                            <h3 className="font-semibold mb-1">Import Your GitHub</h3>
+                            <p className="text-secondary text-sm">Pull your repos and infer skills from languages</p>
+                            <Link
+                                to="/dashboard/github"
+                                className="inline-block mt-2 text-sm text-primary hover:underline"
+                            >
+                                Go to GitHub Import
+                            </Link>
                         </div>
                     </div>
                     <div className="flex items-start gap-4">
@@ -98,7 +165,13 @@ const DashboardHome: React.FC = () => {
                         </div>
                         <div>
                             <h3 className="font-semibold mb-1">Get Personalized Recommendations</h3>
-                            <p className="text-secondary text-sm">Receive course suggestions to bridge your skill gaps</p>
+                            <p className="text-secondary text-sm">See your gaps and next steps for a target role</p>
+                            <Link
+                                to="/dashboard/recommendations"
+                                className="inline-block mt-2 text-sm text-primary hover:underline"
+                            >
+                                Go to Recommendations
+                            </Link>
                         </div>
                     </div>
                 </div>

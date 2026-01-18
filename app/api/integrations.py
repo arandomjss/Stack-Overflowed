@@ -1,9 +1,11 @@
 from flask import Blueprint, request, jsonify
 from app.integrations.linkedin import LinkedInIntegration
-from app.integrations.github import import_github_projects, import_github_skills
+from app.integrations.github import import_github_profile, parse_github_username
 from app.database import get_db_connection
 import json
 from datetime import datetime
+import os
+from urllib.parse import parse_qs
 
 integrations_bp = Blueprint('integrations', __name__)
 
@@ -155,22 +157,57 @@ def preview_linkedin_import():
 
 @integrations_bp.route('/import/github', methods=['POST'])
 def import_from_github():
-    """
-    Import projects and skills from GitHub (REAL API - Free)
-    
-    Request body:
+    """Import projects + inferred skills from GitHub.
+
+    Request body (either works):
     {
-        "user_id": "uuid-string",
-        "github_username": "username"
+      "user_id": "uuid-string",
+      "github_username": "username"
+    }
+    {
+      "user_id": "uuid-string",
+      "github_url": "https://github.com/username"
+    }
+
+    Optional:
+    {
+      "include_language_breakdown": true
     }
     """
     try:
-        data = request.json
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            data = {}
+
+        if not data and request.form:
+            data = request.form.to_dict(flat=True)
+
+        if not data:
+            raw = (request.get_data(as_text=True) or '').strip()
+            if raw:
+                if raw.startswith('{'):
+                    try:
+                        data = json.loads(raw)
+                    except Exception:
+                        return jsonify({"error": "Invalid JSON body"}), 400
+                else:
+                    parsed = parse_qs(raw, keep_blank_values=True)
+                    if parsed:
+                        data = {k: (v[0] if isinstance(v, list) and v else v) for k, v in parsed.items()}
+
         user_id = data.get('user_id')
         github_username = data.get('github_username')
+        github_url = data.get('github_url')
+
+        include_language_breakdown = str(data.get('include_language_breakdown', 'false')).lower() in {
+            '1', 'true', 'yes', 'on'
+        }
+
+        if not github_username and github_url:
+            github_username = parse_github_username(github_url)
         
         if not user_id or not github_username:
-            return jsonify({"error": "user_id and github_username are required"}), 400
+            return jsonify({"error": "user_id and github_username (or github_url) are required"}), 400
         
         # Verify user exists
         conn = get_db_connection()
@@ -181,26 +218,50 @@ def import_from_github():
         if not user:
             conn.close()
             return jsonify({"error": "User not found"}), 404
+
+        user = dict(user)
         
-        # Import projects from GitHub
-        github_data = import_github_projects(github_username)
-        
-        if 'error' in github_data and not github_data['projects']:
+        # Server-side caps to keep token usage under control
+        project_limit = int(os.getenv('GITHUB_PROJECT_LIMIT', '10'))
+        language_call_limit = int(os.getenv('GITHUB_LANGUAGE_CALL_LIMIT', '0'))
+
+        github_data = import_github_profile(
+            github_username,
+            project_limit=project_limit,
+            include_language_breakdown=include_language_breakdown,
+            language_call_limit=language_call_limit,
+        )
+
+        if 'error' in github_data and not github_data.get('projects'):
             conn.close()
             return jsonify({
                 "error": github_data['error'],
                 "imported": {"projects": 0, "skills": 0}
             }), 400
-        
-        # Import skills
-        github_skills = import_github_skills(github_username)
+
+        github_projects = github_data.get('projects') or []
+        github_skills = github_data.get('skills') or []
         
         imported_projects = 0
         imported_skills = 0
         
         # Insert projects
-        for project in github_data['projects']:
+        returned_projects = []
+        returned_skills = []
+
+        for project in github_projects:
             try:
+                # prevent duplicate project rows for same URL
+                cursor.execute(
+                    "SELECT 1 FROM user_projects WHERE user_id = ? AND github_url = ? LIMIT 1",
+                    (user_id, project['url'])
+                )
+                exists = cursor.fetchone()
+
+                if exists:
+                    returned_projects.append(project)
+                    continue
+
                 cursor.execute("""
                     INSERT INTO user_projects 
                     (user_id, project_name, description, sector, skills_used, github_url, date_completed)
@@ -210,11 +271,12 @@ def import_from_github():
                     project['name'],
                     project['description'],
                     user.get('target_sector', 'Tech'),
-                    json.dumps([project['language']] + project['topics']),
+                    json.dumps([project.get('language')] + (project.get('topics') or [])),
                     project['url'],
                     project['updated_at']
                 ))
                 imported_projects += 1
+                returned_projects.append(project)
             except Exception as e:
                 # Skip duplicates
                 continue
@@ -229,14 +291,16 @@ def import_from_github():
                 """, (
                     user_id,
                     skill['name'],
-                    f"GitHub: {skill['evidence']}",
+                    "GitHub",
                     skill['confidence'],
                     'github',
                     json.dumps([skill['evidence']])
                 ))
                 imported_skills += 1
+                returned_skills.append(skill)
             except Exception as e:
                 # Skip duplicates
+                returned_skills.append(skill)
                 continue
         
         conn.commit()
@@ -248,7 +312,10 @@ def import_from_github():
                 "projects": imported_projects,
                 "skills": imported_skills
             },
+            "github_username": github_username,
             "total_repos": github_data.get('total_repos', 0),
+            "projects": returned_projects,
+            "skills": returned_skills,
             "message": f"Imported {imported_projects} projects and {imported_skills} skills from GitHub"
         }), 200
         
@@ -267,16 +334,30 @@ def preview_github_data():
     Preview what would be imported from GitHub before importing
     """
     try:
-        data = request.json
+        data = request.get_json(silent=True) or {}
         github_username = data.get('github_username')
+        github_url = data.get('github_url')
+        if not github_username and github_url:
+            github_username = parse_github_username(github_url)
+
+        include_language_breakdown = str(data.get('include_language_breakdown', 'false')).lower() in {
+            '1', 'true', 'yes', 'on'
+        }
         
         if not github_username:
             return jsonify({"error": "github_username is required"}), 400
-        
-        github_data = import_github_projects(github_username)
-        github_skills = import_github_skills(github_username)
-        
-        if 'error' in github_data and not github_data['projects']:
+
+        project_limit = int(os.getenv('GITHUB_PROJECT_LIMIT', '10'))
+        language_call_limit = int(os.getenv('GITHUB_LANGUAGE_CALL_LIMIT', '0'))
+
+        github_data = import_github_profile(
+            github_username,
+            project_limit=project_limit,
+            include_language_breakdown=include_language_breakdown,
+            language_call_limit=language_call_limit,
+        )
+
+        if 'error' in github_data and not github_data.get('projects'):
             return jsonify({
                 "error": github_data['error'],
                 "preview": {"projects": [], "skills": []}
@@ -285,13 +366,13 @@ def preview_github_data():
         return jsonify({
             "status": "success",
             "preview": {
-                "projects": github_data['projects'],
-                "skills": github_skills,
+                "projects": github_data.get('projects', []),
+                "skills": github_data.get('skills', []),
                 "total_repos": github_data.get('total_repos', 0)
             },
             "counts": {
-                "projects": len(github_data['projects']),
-                "skills": len(github_skills)
+                "projects": len(github_data.get('projects', [])),
+                "skills": len(github_data.get('skills', []))
             }
         }), 200
         

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Upload, Target, BookOpen, LogOut, User, Award } from 'lucide-react';
+import { Home, Upload, Target, Github, LogOut, User, Award } from 'lucide-react';
 
 const DashboardLayout: React.FC = () => {
     const navigate = useNavigate();
@@ -19,7 +19,7 @@ const DashboardLayout: React.FC = () => {
         { path: '/dashboard/upload', icon: Upload, label: 'Upload Resume' },
         { path: '/dashboard/skills', icon: Target, label: 'My Skills' },
         { path: '/dashboard/recommendations', icon: Award, label: 'Recommendations' },
-        { path: '/dashboard/courses', icon: BookOpen, label: 'Courses' },
+        { path: '/dashboard/github', icon: Github, label: 'GitHub' },
     ];
 
     return (

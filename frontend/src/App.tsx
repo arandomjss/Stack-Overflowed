@@ -5,6 +5,7 @@ import DashboardHome from './pages/DashboardHome';
 import ResumeUpload from './pages/ResumeUpload';
 import Skills from './pages/Skills';
 import Recommendations from './pages/Recommendations';
+import GitHubTab from './pages/GitHub';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -29,7 +30,8 @@ function App() {
           <Route path="upload" element={<ResumeUpload />} />
           <Route path="skills" element={<Skills />} />
           <Route path="recommendations" element={<Recommendations />} />
-          <Route path="courses" element={<div className="text-white">Courses Page (Coming Soon)</div>} />
+          <Route path="github" element={<GitHubTab />} />
+          <Route path="courses" element={<Navigate to="/dashboard/github" replace />} />
         </Route>
       </Routes>
     </Router>
