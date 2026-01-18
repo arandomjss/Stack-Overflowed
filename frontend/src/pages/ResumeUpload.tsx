@@ -110,6 +110,21 @@ const ResumeUpload: React.FC = () => {
                 setSkills(initialSkills);
                 setRoadmap(data.roadmap || []);
                 setShowRecommendations(false);
+
+                // Auto-save to profile
+                if (userId && initialSkills.length > 0) {
+                    await fetch(`http://localhost:5000/api/profile/${userId}/skills/bulk`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            skills: initialSkills.map((s: Skill) => ({
+                                skill_name: s.name,
+                                confidence: s.confidence,
+                                source: 'resume'
+                            }))
+                        })
+                    });
+                }
             } else {
                 alert(`Error: ${data.error || 'Failed to analyze resume'}`);
             }

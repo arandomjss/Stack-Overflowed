@@ -136,43 +136,116 @@ def update_profile(user_id):
         return jsonify({"error": str(e)}), 500
 
 
-@profile_bp.route('/profile/<user_id>/skills', methods=['POST'])
-def add_skill(user_id):
-    """Add skill to user profile with sector context"""
+@profile_bp.route('/profile/<user_id>/skills/bulk', methods=['POST'])
+def bulk_add_skills(user_id):
+    """Add multiple skills to user profile"""
     try:
         data = request.json
+        skills = data.get('skills', [])
+        
+        if not skills:
+            return jsonify({"error": "No skills provided"}), 400
+            
         conn = get_db_connection()
         cursor = conn.cursor()
         
         # Verify user exists
         cursor.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,))
         if not cursor.fetchone():
+            conn.close()
             return jsonify({"error": "User not found"}), 404
         
-        cursor.execute("""
-            INSERT INTO user_skills 
-            (user_id, skill_name, sector_context, confidence, source, acquired_date, evidence)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            user_id,
-            data.get('skill_name'),
-            data.get('sector_context'),
-            data.get('confidence', 0.5),
-            data.get('source', 'manual'),
-            data.get('acquired_date'),
-            json.dumps(data.get('evidence', []))
-        ))
-        
+        for skill in skills:
+            cursor.execute("""
+                INSERT INTO user_skills 
+                (user_id, skill_name, sector_context, confidence, source, acquired_date, evidence)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                user_id,
+                skill.get('skill_name'),
+                skill.get('sector_context'),
+                skill.get('confidence', 0.5),
+                skill.get('source', 'manual'),
+                skill.get('acquired_date'),
+                json.dumps(skill.get('evidence', []))
+            ))
+            
         conn.commit()
         conn.close()
         
         return jsonify({
             "status": "success",
-            "message": "Skill added successfully"
+            "message": f"Added {len(skills)} skills successfully"
         }), 201
         
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+
+@profile_bp.route('/profile/<user_id>/skills/<int:skill_id>', methods=['PUT'])
+def update_skill(user_id, skill_id):
+    """Update an existing skill (e.g. confidence score)"""
+    try:
+        data = request.json
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verify ownership
+        cursor.execute("SELECT id FROM user_skills WHERE id = ? AND user_id = ?", (skill_id, user_id))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({"error": "Skill not found or does not belong to user"}), 404
+            
+        updates = []
+        values = []
+        
+        for field in ['confidence', 'sector_context', 'evidence']:
+            if field in data:
+                updates.append(f"{field} = ?")
+                val = json.dumps(data[field]) if field == 'evidence' else data[field]
+                values.append(val)
+                
+        if not updates:
+            conn.close()
+            return jsonify({"error": "No fields to update"}), 400
+            
+        values.append(skill_id)
+        values.append(user_id)
+        
+        query = f"UPDATE user_skills SET {', '.join(updates)} WHERE id = ? AND user_id = ?"
+        cursor.execute(query, values)
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({"status": "success", "message": "Skill updated"}), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@profile_bp.route('/profile/<user_id>/skills/<int:skill_id>', methods=['DELETE'])
+def delete_skill(user_id, skill_id):
+    """Remove a skill from user profile"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verify ownership
+        cursor.execute("SELECT id FROM user_skills WHERE id = ? AND user_id = ?", (skill_id, user_id))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({"error": "Skill not found"}), 404
+            
+        cursor.execute("DELETE FROM user_skills WHERE id = ? AND user_id = ?", (skill_id, user_id))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({"status": "success", "message": "Skill deleted"}), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @profile_bp.route('/profile/<user_id>/skills', methods=['GET'])

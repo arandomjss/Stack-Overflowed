@@ -3,6 +3,7 @@ import Login from './pages/Login';
 import DashboardLayout from './layouts/DashboardLayout';
 import DashboardHome from './pages/DashboardHome';
 import ResumeUpload from './pages/ResumeUpload';
+import Skills from './pages/Skills';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -25,7 +26,7 @@ function App() {
         >
           <Route index element={<DashboardHome />} />
           <Route path="upload" element={<ResumeUpload />} />
-          <Route path="skills" element={<div className="text-white">Skills Page (Coming Soon)</div>} />
+          <Route path="skills" element={<Skills />} />
           <Route path="courses" element={<div className="text-white">Courses Page (Coming Soon)</div>} />
         </Route>
       </Routes>
