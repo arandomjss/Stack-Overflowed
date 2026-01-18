@@ -21,12 +21,27 @@ db.init_app(app)
 from flask_cors import CORS
 CORS(app, resources={
     r"/*": {
-        "origins": ["http://localhost:5173", "http://localhost:5174"],
+        "origins": ["*"],  # Be more permissive for debugging
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True
     }
 })
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Global error handler to ensure JSON response and CORS headers"""
+    # Log the error
+    import traceback
+    app.logger.error(f"Server Error: {str(e)}")
+    traceback.print_exc()
+    
+    response = jsonify({
+        "error": str(e),
+        "message": "Internal Server Error"
+    })
+    response.status_code = 500
+    return response
 
 # Register all blueprints
 app.register_blueprint(resume.bp, url_prefix="/api/resume")

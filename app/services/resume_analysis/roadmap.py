@@ -10,16 +10,21 @@ def _load_roles() -> Dict:
     conn = get_db_connection()
     roles_data = {}
     try:
-        # Structure: role -> category -> list of skills
-        rows = conn.execute('SELECT role_name, category, skill FROM roles').fetchall()
+        # Structure: role -> {sector: sector_name, category -> list of skills}
+        rows = conn.execute('SELECT role_name, category, skill, sector FROM roles').fetchall()
         
         for row in rows:
             role = row['role_name']
             category = row['category']
             skill = row['skill']
+            # sqlite3.Row doesn't have .get(), use dictionary access
+            try:
+                sector = row['sector']
+            except (IndexError, KeyError, TypeError):
+                sector = 'Technology'
             
             if role not in roles_data:
-                roles_data[role] = {}
+                roles_data[role] = {'sector': sector}
             if category not in roles_data[role]:
                 roles_data[role][category] = []
                 

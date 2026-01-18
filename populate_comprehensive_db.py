@@ -15,7 +15,8 @@ def create_tables(conn):
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         role_name TEXT NOT NULL,
         category TEXT NOT NULL,
-        skill TEXT NOT NULL
+        skill TEXT NOT NULL,
+        sector TEXT -- New field for industry sector
     )
     ''')
 
@@ -34,20 +35,21 @@ def create_tables(conn):
         skill TEXT NOT NULL,
         platform TEXT NOT NULL,
         title TEXT NOT NULL,
-        url TEXT NOT NULL
+        url TEXT NOT NULL,
+        sector TEXT -- New field for industry sector
     )
     ''')
 
     conn.commit()
 
 def clear_existing_data(conn):
-    """Clear existing data to avoid duplicates"""
+    """Drop existing tables to apply schema changes"""
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM roles')
-    cursor.execute('DELETE FROM ontology')
-    cursor.execute('DELETE FROM courses')
+    cursor.execute('DROP TABLE IF EXISTS roles')
+    cursor.execute('DROP TABLE IF EXISTS ontology')
+    cursor.execute('DROP TABLE IF EXISTS courses')
     conn.commit()
-    print("✓ Cleared existing data")
+    print("✓ Dropped existing tables for schema update")
 
 def populate_comprehensive_ontology(conn):
     """Add comprehensive skill ontology"""
@@ -104,7 +106,27 @@ def populate_comprehensive_ontology(conn):
         "data structures", "algorithms", "operating systems", "computer networks", "compiler design",
         "graph theory", "complexity analysis", "sorting algorithms", "searching algorithms",
         "dynamic programming", "greedy algorithms", "recursion", "trees", "graphs", "hash tables",
-        "linked lists", "stacks", "queues", "heaps", "tries"
+        "linked lists", "stacks", "queues", "heaps", "tries",
+        
+        # Marketing Skills
+        "seo", "sem", "content marketing", "social media marketing", "email marketing",
+        "google analytics", "copywriting", "brand management", "crm", "growth hacking",
+        
+        # HR Skills
+        "recruitment", "talent acquisition", "performance management", "employee relations",
+        "onboarding", "hris", "payroll", "labor law", "organizational development",
+        
+        # Finance Skills
+        "financial modeling", "accounting", "auditing", "risk management", "investment analysis",
+        "corporate finance", "budgeting", "wealth management", "taxation", "fintech",
+        
+        # Design Skills
+        "ui design", "ux design", "graphic design", "figma", "adobe xd", "photoshop",
+        "illustrator", "wireframing", "prototyping", "user research", "interaction design",
+        
+        # Healthcare Skills
+        "medical coding", "health informatics", "clinical data", "hipaa", "patient care",
+        "electronic health records", "telehealth", "medical terminology"
     ]
     
     cursor = conn.cursor()
@@ -174,21 +196,66 @@ def populate_comprehensive_roles(conn):
             "projects": ["mobile app", "cross-platform app", "native app"]
         },
         "cloud architect": {
+            "sector": "Technology",
             "foundation": ["linux", "networking", "security", "databases"],
             "core": ["aws", "azure", "docker", "kubernetes", "terraform"],
             "advanced": ["system design", "high availability", "disaster recovery", "cost optimization"],
             "projects": ["cloud migration", "infrastructure design", "multi-region deployment"]
+        },
+        "digital marketing manager": {
+            "sector": "Marketing",
+            "foundation": ["seo", "content marketing", "social media marketing", "google analytics"],
+            "core": ["email marketing", "crm", "copywriting", "sem"],
+            "advanced": ["brand management", "growth hacking", "marketing automation"],
+            "projects": ["marketing campaign", "seo audit", "lead generation system"]
+        },
+        "hr manager": {
+            "sector": "HR",
+            "foundation": ["recruitment", "employee relations", "onboarding", "communication"],
+            "core": ["performance management", "labor law", "hris", "payroll"],
+            "advanced": ["organizational development", "strategic hr", "change management"],
+            "projects": ["hiring strategy", "performance review system", "employee engagement program"]
+        },
+        "financial analyst": {
+            "sector": "Finance",
+            "foundation": ["financial modeling", "accounting", "excel", "statistics"],
+            "core": ["investment analysis", "corporate finance", "budgeting", "valuation"],
+            "advanced": ["risk management", "market research", "financial reporting"],
+            "projects": ["investment portfolio", "budget forecast", "financial statement analysis"]
+        },
+        "ui/ux designer": {
+            "sector": "Design",
+            "foundation": ["ui design", "ux design", "figma", "user research"],
+            "core": ["wireframing", "prototyping", "visual design", "interaction design"],
+            "advanced": ["design systems", "usability testing", "adobe creative suite"],
+            "projects": ["mobile app design", "web platform redesign", "design system"]
+        },
+        "health informatics specialist": {
+            "sector": "Healthcare",
+            "foundation": ["medical terminology", "health informatics", "data analysis"],
+            "core": ["electronic health records", "hipaa", "clinical data", "sql"],
+            "advanced": ["healthcare analytics", "interoperability", "telehealth"],
+            "projects": ["ehr implementation", "patient data analysis", "health dashboard"]
         }
     }
     
+    # Update existing roles to have a default sector
+    tech_roles = ["software engineer", "frontend developer", "backend developer", "full stack developer", 
+                  "data scientist", "machine learning engineer", "devops engineer", "data analyst", "mobile developer"]
+    for role in tech_roles:
+        if role in roles_data:
+            roles_data[role]["sector"] = "Technology"
+
     cursor = conn.cursor()
     count = 0
-    for role, categories in roles_data.items():
-        for category, skills in categories.items():
+    for role, data in roles_data.items():
+        sector = data.get("sector", "General")
+        for category, skills in data.items():
+            if category == "sector": continue
             for skill in skills:
                 cursor.execute(
-                    'INSERT INTO roles (role_name, category, skill) VALUES (?, ?, ?)',
-                    (role, category, skill.lower())
+                    'INSERT INTO roles (role_name, category, skill, sector) VALUES (?, ?, ?, ?)',
+                    (role, category, skill.lower(), sector)
                 )
                 count += 1
     conn.commit()
@@ -297,16 +364,43 @@ def populate_comprehensive_courses(conn):
             {"platform": "Udemy", "title": "System Design Interview Course", "url": "https://www.udemy.com/course/system-design-interview/"},
             {"platform": "Coursera", "title": "Software Architecture and Design", "url": "https://www.coursera.org/learn/software-architecture"},
             {"platform": "educative.io", "title": "Grokking the System Design Interview", "url": "https://www.educative.io/courses/grokking-the-system-design-interview"}
+        ],
+        "seo": [
+            {"platform": "HubSpot", "title": "SEO Certification", "url": "https://academy.hubspot.com/courses/seo-training"},
+            {"platform": "Coursera", "title": "Search Engine Optimization Specialization", "url": "https://www.coursera.org/specializations/seo"}
+        ],
+        "recruitment": [
+            {"platform": "LinkedIn Learning", "title": "Technical Recruiting", "url": "https://www.linkedin.com/learning/technical-recruiting"},
+            {"platform": "Coursera", "title": "Recruiting and Talent Acquisition", "url": "https://www.coursera.org/learn/recruiting-talent-acquisition"}
+        ],
+        "financial modeling": [
+            {"platform": "Udemy", "title": "Complete Financial Analyst Training", "url": "https://www.udemy.com/course/the-complete-financial-analyst-course/"},
+            {"platform": "Coursera", "title": "Finance & Quantitative Modeling", "url": "https://www.coursera.org/specializations/finance-quantitative-modeling-introduction"}
+        ],
+        "figma": [
+            {"platform": "Udemy", "title": "Figma UI/UX Design", "url": "https://www.udemy.com/course/figma-ux-ui-design-complete-course/"},
+            {"platform": "Coursera", "title": "Google UX Design Professional Certificate", "url": "https://www.coursera.org/professional-certificates/google-ux-design"}
+        ],
+        "health informatics": [
+            {"platform": "Coursera", "title": "Health Informatics Specialization", "url": "https://www.coursera.org/specializations/health-informatics"},
+            {"platform": "edX", "title": "Health Informatics Fundamentals", "url": "https://www.edx.org/learn/health-informatics"}
         ]
     }
     
+    # Assign sectors to skills for better filtering later
+    skill_sectors = {
+        "seo": "Marketing", "recruitment": "HR", "financial modeling": "Finance", 
+        "figma": "Design", "health informatics": "Healthcare"
+    }
+
     cursor = conn.cursor()
     count = 0
     for skill, courses in courses_data.items():
+        sector = skill_sectors.get(skill.lower(), "Technology")
         for course in courses:
             cursor.execute(
-                'INSERT INTO courses (skill, platform, title, url) VALUES (?, ?, ?, ?)',
-                (skill.lower(), course['platform'], course['title'], course['url'])
+                'INSERT INTO courses (skill, platform, title, url, sector) VALUES (?, ?, ?, ?, ?)',
+                (skill.lower(), course['platform'], course['title'], course['url'], sector)
             )
             count += 1
     conn.commit()
@@ -342,12 +436,12 @@ def main():
     
     conn = sqlite3.connect(db_path)
     
+    # Clear existing data (drop tables)
+    clear_existing_data(conn)
+    
     # Create tables
     create_tables(conn)
-    print("✓ Created tables")
-    
-    # Clear existing data
-    clear_existing_data(conn)
+    print("✓ Created tables with updated schema")
     
     # Populate data
     populate_comprehensive_ontology(conn)

@@ -36,8 +36,11 @@ const ResumeUpload: React.FC = () => {
     const [showRecommendations, setShowRecommendations] = useState(false);
     const [roles, setRoles] = useState<string[]>([]);
     const [selectedRole, setSelectedRole] = useState<string>('');
+    const [selectedSector, setSelectedSector] = useState<string>('Technology');
     const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
     const userId = localStorage.getItem('user_id');
+
+    const sectors = ['Technology', 'Marketing', 'HR', 'Finance', 'Design', 'Healthcare'];
 
     // Fetch available roles on component mount
     React.useEffect(() => {
@@ -93,6 +96,7 @@ const ResumeUpload: React.FC = () => {
         if (selectedRole) {
             formData.append('target_role', selectedRole);
         }
+        formData.append('target_sector', selectedSector);
 
         try {
             const response = await fetch('http://localhost:5000/api/resume/analyze', {
@@ -116,6 +120,7 @@ const ResumeUpload: React.FC = () => {
                 if (selectedRole) {
                     localStorage.setItem('targetRole', selectedRole);
                 }
+                localStorage.setItem('targetSector', selectedSector);
 
                 // Auto-save to profile
                 if (userId && initialSkills.length > 0) {
@@ -178,7 +183,7 @@ const ResumeUpload: React.FC = () => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         target_role: selectedRole,
-                        target_sector: 'Technology',
+                        target_sector: selectedSector,
                         skills: skills.map(s => ({ name: s.name, confidence: s.confidence }))
                     })
                 });
@@ -288,28 +293,53 @@ const ResumeUpload: React.FC = () => {
             </motion.div>
 
             {skills.length > 0 && (
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="glass-panel p-6"
-                >
-                    <div className="flex items-center gap-3 mb-4">
-                        <Briefcase className="h-6 w-6 text-violet-400" />
-                        <h2 className="text-xl font-bold">Target Role</h2>
-                    </div>
-                    <p className="text-secondary mb-4">Select the role you want to pursue</p>
-                    <select
-                        value={selectedRole}
-                        onChange={(e) => setSelectedRole(e.target.value)}
-                        className="w-full px-4 py-3 bg-background border border-white/20 rounded-lg text-white focus:border-primary focus:outline-none"
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="glass-panel p-6"
                     >
-                        {roles.map((role) => (
-                            <option key={role} value={role} className="bg-background">
-                                {role}
-                            </option>
-                        ))}
-                    </select>
-                </motion.div>
+                        <div className="flex items-center gap-3 mb-4">
+                            <Target className="h-6 w-6 text-primary" />
+                            <h2 className="text-xl font-bold">Target Sector</h2>
+                        </div>
+                        <p className="text-secondary mb-4">Select your industry</p>
+                        <select
+                            value={selectedSector}
+                            onChange={(e) => setSelectedSector(e.target.value)}
+                            className="w-full px-4 py-3 bg-background border border-white/20 rounded-lg text-white focus:border-primary focus:outline-none"
+                        >
+                            {sectors.map((sector) => (
+                                <option key={sector} value={sector} className="bg-background">
+                                    {sector}
+                                </option>
+                            ))}
+                        </select>
+                    </motion.div>
+
+                    <motion.div
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="glass-panel p-6"
+                    >
+                        <div className="flex items-center gap-3 mb-4">
+                            <Briefcase className="h-6 w-6 text-violet-400" />
+                            <h2 className="text-xl font-bold">Target Role</h2>
+                        </div>
+                        <p className="text-secondary mb-4">Select the role you want to pursue</p>
+                        <select
+                            value={selectedRole}
+                            onChange={(e) => setSelectedRole(e.target.value)}
+                            className="w-full px-4 py-3 bg-background border border-white/20 rounded-lg text-white focus:border-primary focus:outline-none"
+                        >
+                            {roles.map((role) => (
+                                <option key={role} value={role} className="bg-background">
+                                    {role}
+                                </option>
+                            ))}
+                        </select>
+                    </motion.div>
+                </div>
             )}
 
             {skills.length > 0 && (

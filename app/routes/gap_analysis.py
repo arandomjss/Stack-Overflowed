@@ -227,14 +227,23 @@ def generate_recommendations(missing_required, missing_preferred, weak_skills, s
     for skill_obj in missing_required[:3]:  # Top 3 missing
         skill = skill_obj['skill']
         
-        # Find relevant courses from database
+        # Find relevant courses from database, filtered by sector if possible
         cursor.execute("""
             SELECT platform, title, url FROM courses 
-            WHERE LOWER(skill) = LOWER(?)
+            WHERE LOWER(skill) = LOWER(?) AND (LOWER(sector) = LOWER(?) OR sector IS NULL OR sector = 'Technology')
             LIMIT 1
-        """, (skill,))
+        """, (skill, sector))
         
         course = cursor.fetchone()
+        
+        if not course:
+            # Fallback to any course for this skill
+            cursor.execute("""
+                SELECT platform, title, url FROM courses 
+                WHERE LOWER(skill) = LOWER(?)
+                LIMIT 1
+            """, (skill,))
+            course = cursor.fetchone()
         
         if course:
             recommendations.append({
@@ -247,7 +256,7 @@ def generate_recommendations(missing_required, missing_preferred, weak_skills, s
                     "title": course['title'],
                     "url": course['url']
                 }],
-                "reason": f"Critical skill gap - {skill} is required for {role}"
+                "reason": f"Critical skill gap - {skill} is required for {role} in {sector}"
             })
     
     # Recommend practice for weak skills
@@ -269,11 +278,19 @@ def generate_recommendations(missing_required, missing_preferred, weak_skills, s
         # Find course from database
         cursor.execute("""
             SELECT platform, title, url FROM courses 
-            WHERE LOWER(skill) = LOWER(?)
+            WHERE LOWER(skill) = LOWER(?) AND (LOWER(sector) = LOWER(?) OR sector IS NULL OR sector = 'Technology')
             LIMIT 1
-        """, (skill,))
+        """, (skill, sector))
         
         course = cursor.fetchone()
+        
+        if not course:
+            cursor.execute("""
+                SELECT platform, title, url FROM courses 
+                WHERE LOWER(skill) = LOWER(?)
+                LIMIT 1
+            """, (skill,))
+            course = cursor.fetchone()
         
         if course:
             recommendations.append({
@@ -286,7 +303,7 @@ def generate_recommendations(missing_required, missing_preferred, weak_skills, s
                     "title": course['title'],
                     "url": course['url']
                 }],
-                "reason": "Preferred skill for role advancement"
+                "reason": f"Preferred skill for {role} advancement in {sector}"
             })
     
     conn.close()
