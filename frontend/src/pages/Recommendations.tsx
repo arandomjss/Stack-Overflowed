@@ -50,10 +50,12 @@ const Recommendations: React.FC = () => {
         // Get skills from localStorage (set during resume upload)
         const storedSkills = localStorage.getItem('userSkills');
         const storedTargetRole = localStorage.getItem('targetRole');
+        const storedTargetSector = localStorage.getItem('targetSector');
         const userId = localStorage.getItem('user_id');
 
         let skills: Array<{ name: string; confidence: number }> | null = null;
         let targetRole: string = storedTargetRole || 'software engineer';
+        let targetSector: string = storedTargetSector || 'Healthcare';
 
         if (storedSkills) {
           skills = JSON.parse(storedSkills);
@@ -61,10 +63,21 @@ const Recommendations: React.FC = () => {
           // If this is an existing profile (skills saved in DB) but localStorage isn't set,
           // load the user's skills from the backend profile endpoint.
           const profileRes = await fetch(`${apiBaseUrl}/api/profile/${userId}`);
+          if (profileRes.status === 401 || profileRes.status === 404) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user_id');
+            window.location.assign('/');
+            return;
+          }
           if (profileRes.ok) {
             const profileData = await profileRes.json();
-            if (!storedTargetRole && profileData?.user?.target_role) {
-              targetRole = profileData.user.target_role;
+            if (profileData?.user?.target_role) {
+              targetRole = String(profileData.user.target_role);
+              localStorage.setItem('targetRole', targetRole);
+            }
+            if (profileData?.user?.target_sector) {
+              targetSector = String(profileData.user.target_sector);
+              localStorage.setItem('targetSector', targetSector);
             }
             if (Array.isArray(profileData?.skills) && profileData.skills.length > 0) {
               skills = profileData.skills

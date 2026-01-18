@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, Target, Award, Loader, CheckCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface UserSkill {
     id: number;
@@ -11,11 +12,23 @@ interface UserSkill {
 }
 
 const Skills: React.FC = () => {
+    const apiBaseUrl = useMemo(
+        () => (import.meta as any)?.env?.VITE_API_BASE_URL || 'http://localhost:5000',
+        []
+    );
+
+    const navigate = useNavigate();
     const [skills, setSkills] = useState<UserSkill[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
     const [newSkill, setNewSkill] = useState({ name: '', confidence: 50 });
     const userId = localStorage.getItem('user_id');
+
+    const forceLogout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user_id');
+        navigate('/');
+    };
 
     useEffect(() => {
         fetchSkills();
@@ -24,7 +37,11 @@ const Skills: React.FC = () => {
     const fetchSkills = async () => {
         if (!userId) return;
         try {
-            const response = await fetch(`http://localhost:5000/api/profile/${userId}/skills`);
+            const response = await fetch(`${apiBaseUrl}/api/profile/${userId}/skills`);
+            if (response.status === 401 || response.status === 404) {
+                forceLogout();
+                return;
+            }
             const data = await response.json();
             if (response.ok) {
                 setSkills(data.skills || []);
@@ -41,7 +58,7 @@ const Skills: React.FC = () => {
         if (!newSkill.name || !userId) return;
 
         try {
-            const response = await fetch(`http://localhost:5000/api/profile/${userId}/skills/bulk`, {
+            const response = await fetch(`${apiBaseUrl}/api/profile/${userId}/skills/bulk`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -52,6 +69,11 @@ const Skills: React.FC = () => {
                     }]
                 })
             });
+
+            if (response.status === 401 || response.status === 404) {
+                forceLogout();
+                return;
+            }
 
             if (response.ok) {
                 await fetchSkills();
@@ -66,11 +88,16 @@ const Skills: React.FC = () => {
     const handleUpdateConfidence = async (skillId: number, confidence: number) => {
         if (!userId) return;
         try {
-            const response = await fetch(`http://localhost:5000/api/profile/${userId}/skills/${skillId}`, {
+            const response = await fetch(`${apiBaseUrl}/api/profile/${userId}/skills/${skillId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ confidence: confidence / 100 })
             });
+
+            if (response.status === 401 || response.status === 404) {
+                forceLogout();
+                return;
+            }
 
             if (response.ok) {
                 setSkills(skills.map(s => s.id === skillId ? { ...s, confidence: confidence / 100 } : s));
@@ -83,9 +110,14 @@ const Skills: React.FC = () => {
     const handleDeleteSkill = async (skillId: number) => {
         if (!userId) return;
         try {
-            const response = await fetch(`http://localhost:5000/api/profile/${userId}/skills/${skillId}`, {
+            const response = await fetch(`${apiBaseUrl}/api/profile/${userId}/skills/${skillId}`, {
                 method: 'DELETE'
             });
+
+            if (response.status === 401 || response.status === 404) {
+                forceLogout();
+                return;
+            }
 
             if (response.ok) {
                 setSkills(skills.filter(s => s.id !== skillId));

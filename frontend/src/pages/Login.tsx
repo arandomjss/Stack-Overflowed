@@ -8,6 +8,7 @@ const Login: React.FC = () => {
     const [isSignUp, setIsSignUp] = useState(false);
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
+        name: '',
         username: '',
         email: '',
         password: ''
@@ -20,7 +21,7 @@ const Login: React.FC = () => {
         try {
             const endpoint = isSignUp ? '/auth/register' : '/auth/login';
             const payload = isSignUp
-                ? { username: formData.username, email: formData.email, password: formData.password }
+                ? { name: formData.name, username: formData.username, email: formData.email, password: formData.password }
                 : { username: formData.username, password: formData.password };
 
             const response = await fetch(`http://localhost:5000${endpoint}`, {
@@ -80,6 +81,8 @@ const Login: React.FC = () => {
                                     placeholder="Full Name"
                                     className="input-field pl-10"
                                     required={isSignUp}
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 />
                             </div>
                         )}

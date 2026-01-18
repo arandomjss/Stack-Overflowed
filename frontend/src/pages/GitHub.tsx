@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ExternalLink, Github, Loader2, RefreshCcw, Save } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 type GitHubSkill = {
   name: string;
@@ -51,6 +52,7 @@ function parseUsernameFromGithubUrl(value: string): string | null {
 
 const GitHubTab: React.FC = () => {
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+  const navigate = useNavigate();
   const userId = localStorage.getItem('user_id');
 
   const [githubInput, setGithubInput] = useState<string>('');
@@ -65,11 +67,21 @@ const GitHubTab: React.FC = () => {
 
   const githubUsername = useMemo(() => parseUsernameFromGithubUrl(githubInput), [githubInput]);
 
+  const forceLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user_id');
+    navigate('/');
+  };
+
   const refreshProfile = async () => {
     if (!userId) return;
     setRefreshingProfile(true);
     try {
       const res = await fetch(`${apiBaseUrl}/api/profile/${userId}`);
+      if (res.status === 401 || res.status === 404) {
+        forceLogout();
+        return;
+      }
       if (!res.ok) return;
       const data = await res.json();
       setExistingProjects(data?.projects || []);
@@ -111,7 +123,17 @@ const GitHubTab: React.FC = () => {
         }),
       });
 
-      const data = await res.json();
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+
+      if (res.status === 401 || res.status === 404) {
+        forceLogout();
+        return;
+      }
       if (!res.ok) {
         setError(data?.error || data?.message || 'GitHub import failed');
         return;

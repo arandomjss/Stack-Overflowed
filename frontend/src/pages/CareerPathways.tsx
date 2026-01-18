@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -94,6 +95,8 @@ const CareerPathways: React.FC = () => {
     []
   );
 
+  const navigate = useNavigate();
+
   const userId = localStorage.getItem('user_id');
 
   const [data, setData] = useState<PathwaysResponse | null>(null);
@@ -104,6 +107,12 @@ const CareerPathways: React.FC = () => {
     skill: PathwaySkill;
     phase: string;
   } | null>(null);
+
+  const forceLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user_id');
+    navigate('/');
+  };
 
   const fetchTree = async (role?: string) => {
     setError(null);
@@ -121,7 +130,17 @@ const CareerPathways: React.FC = () => {
       if (role) url.searchParams.set('target_role', role);
 
       const res = await fetch(url.toString());
-      const json = (await res.json()) as PathwaysResponse;
+      let json: PathwaysResponse | null = null;
+      try {
+        json = (await res.json()) as PathwaysResponse;
+      } catch {
+        json = null;
+      }
+
+      if (res.status === 401 || res.status === 404) {
+        forceLogout();
+        return;
+      }
 
       if (!res.ok) {
         setError(json?.error || 'Failed to load pathways');

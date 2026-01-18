@@ -12,6 +12,7 @@ const DashboardHome: React.FC = () => {
     const [skillsTracked, setSkillsTracked] = useState<number | null>(null);
     const [projectsImported, setProjectsImported] = useState<number | null>(null);
     const [readinessScore, setReadinessScore] = useState<number | null>(null);
+    const [displayName, setDisplayName] = useState<string | null>(null);
 
     useEffect(() => {
         const userId = localStorage.getItem('user_id');
@@ -27,6 +28,12 @@ const DashboardHome: React.FC = () => {
         (async () => {
             try {
                 const res = await fetch(`${apiBaseUrl}/api/profile/${userId}`, { signal: controller.signal });
+                if (res.status === 401 || res.status === 404) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user_id');
+                    window.location.assign('/');
+                    return;
+                }
                 if (!res.ok) {
                     setSkillsTracked(0);
                     setProjectsImported(0);
@@ -35,6 +42,10 @@ const DashboardHome: React.FC = () => {
                 }
 
                 const data = await res.json();
+
+                const name = data?.user?.name ? String(data.user.name) : null;
+                const username = data?.user?.username ? String(data.user.username) : null;
+                setDisplayName(name || username);
 
                 const skillsCount = Array.isArray(data?.skills) ? data.skills.length : 0;
                 const projectsCount = Array.isArray(data?.projects) ? data.projects.length : 0;
@@ -62,7 +73,9 @@ const DashboardHome: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
             >
-                <h1 className="text-4xl font-bold mb-2">Welcome Back!</h1>
+                <h1 className="text-4xl font-bold mb-2">
+                    {displayName ? `Welcome Back, ${displayName}!` : 'Welcome Back!'}
+                </h1>
                 <p className="text-secondary">Track your skills and accelerate your career growth</p>
             </motion.div>
 

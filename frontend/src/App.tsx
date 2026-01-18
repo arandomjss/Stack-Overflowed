@@ -7,6 +7,7 @@ import Skills from './pages/Skills';
 import Recommendations from './pages/Recommendations';
 import GitHubTab from './pages/GitHub';
 import CareerPathways from './pages/CareerPathways.tsx';
+import Profile from './pages/Profile.tsx';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -33,6 +34,7 @@ function App() {
           <Route path="recommendations" element={<Recommendations />} />
           <Route path="github" element={<GitHubTab />} />
           <Route path="pathways" element={<CareerPathways />} />
+          <Route path="profile" element={<Profile />} />
           <Route path="courses" element={<Navigate to="/dashboard/github" replace />} />
         </Route>
       </Routes>
