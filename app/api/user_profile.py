@@ -4,6 +4,8 @@ import json
 import uuid
 from datetime import datetime
 
+from app.services.readiness import build_skill_conf_map_from_rows, compute_role_readiness
+
 profile_bp = Blueprint('profile', __name__)
 
 @profile_bp.route('/profile', methods=['POST'])
@@ -85,6 +87,26 @@ def get_profile(user_id):
             ORDER BY analysis_date DESC LIMIT 1
         """, (user_id,))
         latest_analysis = cursor.fetchone()
+
+        # Compute a live readiness score (authoritative) for the user's current target role
+        computed_readiness = None
+        try:
+            from app.services.resume_analysis.roadmap import _load_roles
+            from app.services.resume_analysis.utils import match_role
+
+            roles_data = _load_roles()
+            target_role = (dict(user).get('target_role') or 'software engineer').strip()
+            matched_role = match_role(target_role, roles_data) or target_role
+            if matched_role not in roles_data and 'software engineer' in roles_data:
+                matched_role = 'software engineer'
+            role_requirements = roles_data.get(matched_role, {})
+            skill_conf = build_skill_conf_map_from_rows(skills)
+            computed_readiness = {
+                **compute_role_readiness(role_requirements, skill_conf),
+                'target_role': matched_role,
+            }
+        except Exception:
+            computed_readiness = None
         
         conn.close()
         
@@ -93,7 +115,8 @@ def get_profile(user_id):
             "skills": skills,
             "courses": courses,
             "projects": projects,
-            "latest_analysis": dict(latest_analysis) if latest_analysis else None
+            "latest_analysis": dict(latest_analysis) if latest_analysis else None,
+            "computed_readiness": computed_readiness,
         }), 200
         
     except Exception as e:

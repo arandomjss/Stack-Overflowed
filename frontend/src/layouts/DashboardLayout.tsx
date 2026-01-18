@@ -44,7 +44,11 @@ const DashboardLayout: React.FC = () => {
                 const data = await res.json();
                 setDisplayName(data?.user?.name || data?.user?.username || 'User');
                 setDisplaySub(data?.user?.username ? `@${data.user.username}` : 'Student');
-                setReadiness(data?.latest_analysis?.readiness_score || 0);
+                const r =
+                    typeof data?.computed_readiness?.readiness_score === 'number'
+                        ? data.computed_readiness.readiness_score
+                        : data?.latest_analysis?.readiness_score;
+                setReadiness(typeof r === 'number' ? r : 0);
             } catch (err) { console.error(err); }
         })();
 

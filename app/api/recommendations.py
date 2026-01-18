@@ -3,6 +3,7 @@ from typing import List, Dict
 from app.models.schemas import Skill
 from app.services.resume_analysis.roadmap import generate_roadmap
 from app.services.resume_analysis.course_mapper import map_courses_to_skills
+from app.services.readiness import build_skill_conf_map_from_request, compute_role_readiness
 
 recommendations_bp = Blueprint("recommendations", __name__)
 
@@ -100,6 +101,17 @@ def get_recommendations():
         # Parse skills
         skills = [Skill(name=s["name"], confidence=s["confidence"]) for s in data["skills"]]
         target_role = data.get("target_role", "software engineer")
+
+        # Load canonical role requirements (for consistent readiness)
+        from app.services.resume_analysis.roadmap import _load_roles
+        from app.services.resume_analysis.utils import match_role
+
+        roles_data = _load_roles()
+        matched_role = match_role(target_role, roles_data) or target_role
+        if matched_role not in roles_data and 'software engineer' in roles_data:
+            matched_role = 'software engineer'
+
+        role_requirements = roles_data.get(matched_role)
         
         # Generate roadmap (identifies skill gaps)
         roadmap_phases = generate_roadmap(skills, target_role)
@@ -141,18 +153,17 @@ def get_recommendations():
                 
                 recommendations.append(recommendation)
         
-        # Calculate readiness score
-        total_required_skills = sum(len(phase.skills) for phase in roadmap_with_courses)
-        user_skills_count = len(skills)
-        readiness_score = min(100, int((user_skills_count / max(1, user_skills_count + total_required_skills)) * 100))
+        # Calculate readiness score (shared definition used across the app)
+        skill_conf = build_skill_conf_map_from_request(data["skills"])
+        readiness_score = compute_role_readiness(role_requirements or {}, skill_conf)["readiness_score"]
         
         return jsonify({
             "readiness_score": readiness_score,
-            "target_role": target_role,
+            "target_role": matched_role,
             "recommendations": recommendations,
             "summary": {
-                "total_skills_needed": total_required_skills,
-                "current_skills": user_skills_count,
+                "total_skills_needed": sum(len(phase.skills) for phase in roadmap_with_courses),
+                "current_skills": len(skills),
                 "courses_available": sum(len(r["courses"]) for r in recommendations),
                 "videos_available": sum(len(r["videos"]) for r in recommendations)
             }

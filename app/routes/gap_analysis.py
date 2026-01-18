@@ -122,11 +122,10 @@ def analyze_gaps(user_id):
                     "reason": "Preferred for competitive advantage"
                 })
         
-        # Calculate readiness score
-        total_required = len(required_skills)
-        matched_required = sum(1 for skill in required_skills if find_matching_skill(skill, user_skill_names) is not None and find_matching_skill(skill, user_skill_names) >= 0.5)
-        
-        readiness_score = (matched_required / total_required * 100) if total_required > 0 else 0
+        # Calculate readiness score (shared definition used across the app)
+        from app.services.readiness import compute_role_readiness
+
+        readiness_score = compute_role_readiness(role_requirements, user_skill_names)['readiness_score']
         
         # 5. Generate recommendations
         recommendations = generate_recommendations(

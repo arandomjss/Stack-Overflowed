@@ -2,8 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Youtube, ExternalLink, Filter,
-  Award, Clock, CheckCircle, Sparkles, Target, Zap
+  Clock, CheckCircle, Sparkles, Target, Zap
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface Course { platform: string; title: string; url: string; }
 interface Video { title: string; channel: string; url: string; duration: string; }
@@ -32,50 +33,93 @@ interface RecommendationsData {
 const Recommendations: React.FC = () => {
   const [data, setData] = useState<RecommendationsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedPhase, setSelectedPhase] = useState<string>('all');
   const [selectedPriority, setSelectedPriority] = useState<string>('all');
+
+  const navigate = useNavigate();
 
   const apiBaseUrl = useMemo(() => import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000', []);
 
   useEffect(() => {
     const loadRecommendations = async () => {
+      setError(null);
       try {
         const storedSkills = localStorage.getItem('userSkills');
         const storedTargetRole = localStorage.getItem('targetRole');
         const userId = localStorage.getItem('user_id');
 
-        let skills = storedSkills ? JSON.parse(storedSkills) : null;
-        let targetRole = storedTargetRole || 'Software Engineer';
+        const normalizeSkills = (raw: any): Array<{ name: string; confidence?: number }> => {
+          if (!Array.isArray(raw)) return [];
+          return raw
+            .map((s: any) => {
+              if (typeof s === 'string') return { name: s };
+              const name = s?.name || s?.skill_name || s?.skill;
+              if (!name) return null;
+              const confidence = typeof s?.confidence === 'number' ? s.confidence : undefined;
+              return { name: String(name), confidence };
+            })
+            .filter(Boolean) as Array<{ name: string; confidence?: number }>;
+        };
 
-        // Fetch from API if skills available
-        if (skills?.length > 0) {
-          const response = await fetch(`${apiBaseUrl}/api/recommendations`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ skills, target_role: targetRole }),
-          });
-          if (response.ok) {
-            setData(await response.json());
+        let skills = storedSkills ? normalizeSkills(JSON.parse(storedSkills)) : [];
+        let targetRole = storedTargetRole || 'software engineer';
+
+        // If localStorage skills are missing, fall back to profile as the source of truth.
+        if ((!skills || skills.length === 0) && userId) {
+          const profileRes = await fetch(`${apiBaseUrl}/api/profile/${userId}`);
+          if (profileRes.status === 401 || profileRes.status === 404) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user_id');
+            navigate('/');
+            return;
           }
-        } else {
-          // Demo Fallback Data
-          setData({
-            readiness_score: 45,
-            target_role: targetRole,
-            recommendations: [
-              {
-                skill_name: 'System Design',
-                phase: 'core',
-                priority: 'high',
-                courses: [{ platform: 'Coursera', title: 'Architecting Systems', url: '#' }],
-                videos: [{ title: 'System Design 101', channel: 'ByteByteGo', url: '#', duration: '15:20' }],
-                reason: 'Critical for mid-level software engineering roles.'
-              }
-            ],
-            summary: { total_skills_needed: 12, current_skills: 5, courses_available: 24, videos_available: 15 }
-          });
+
+          if (profileRes.ok) {
+            const profileJson = await profileRes.json();
+            skills = normalizeSkills(
+              (profileJson?.skills || []).map((s: any) => ({
+                name: s?.skill_name,
+                confidence: s?.confidence,
+              }))
+            );
+
+            targetRole =
+              profileJson?.computed_readiness?.target_role ||
+              profileJson?.user?.target_role ||
+              targetRole;
+
+            // Keep localStorage in sync for downstream pages.
+            localStorage.setItem('userSkills', JSON.stringify(skills));
+            localStorage.setItem('targetRole', String(targetRole));
+          }
         }
-      } catch (err) { console.error(err); } finally { setLoading(false); }
+
+        if (!skills || skills.length === 0) {
+          setData(null);
+          setError('Add skills (Resume/GitHub) to generate learning recommendations.');
+          return;
+        }
+
+        const response = await fetch(`${apiBaseUrl}/api/recommendations`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ skills, target_role: targetRole }),
+        });
+
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(text || 'Failed to load recommendations');
+        }
+
+        setData(await response.json());
+      } catch (err) {
+        console.error(err);
+        setData(null);
+        setError('Failed to load recommendations.');
+      } finally {
+        setLoading(false);
+      }
     };
     loadRecommendations();
   }, [apiBaseUrl]);
@@ -102,6 +146,12 @@ const Recommendations: React.FC = () => {
         <h1 className="text-3xl font-black text-[#1A1C1E] tracking-tight mb-1">Learning HQ</h1>
         <p className="text-[#A0AEC0] font-bold text-[10px] uppercase tracking-widest">Personalized intelligence to reach your career peak</p>
       </div>
+
+      {error && (
+        <div className="mx-4 p-4 bg-rose-50 rounded-2xl border border-rose-100 text-rose-500 text-xs font-black uppercase tracking-tight">
+          {error}
+        </div>
+      )}
 
       {/* READINESS BENTO BANNER */}
       {data && (

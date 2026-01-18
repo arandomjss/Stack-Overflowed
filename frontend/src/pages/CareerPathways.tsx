@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-  AlertTriangle, CheckCircle2, GitBranch, GraduationCap,
-  RefreshCcw, Target, ChevronRight, Sparkles, BookOpen, ExternalLink, Zap, X
+  AlertTriangle, CheckCircle2,
+  RefreshCcw, Target, ChevronRight, BookOpen, ExternalLink, Zap, X
 } from 'lucide-react';
 
 // --- Types synchronized with pathways.py backend ---
@@ -27,6 +27,7 @@ type SuggestedRole = {
   fit_score: number;
   matched_required: number;
   total_required: number;
+  projected_readiness_score?: number;
 };
 
 type PathwaysResponse = {
@@ -162,7 +163,7 @@ const CareerPathways: React.FC = () => {
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/60 mb-1">Current Readiness</p>
             <h2 className="text-5xl font-black leading-none">{Math.round(data.stats.readiness_score)}%</h2>
           </div>
-          <div className="flex-1 grid grid-cols-3 gap-6 border-l border-white/20 pl-10 hidden md:grid">
+          <div className="flex-1 hidden md:grid grid-cols-3 gap-6 border-l border-white/20 pl-10">
             <div>
               <p className="text-[10px] font-black uppercase text-white/60 mb-1">Complete</p>
               <p className="text-xl font-black">{data.stats.skills_complete}</p>
@@ -246,16 +247,33 @@ const CareerPathways: React.FC = () => {
         <h2 className="text-xl font-black mb-8 uppercase tracking-tight">Alternative Career Fits</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           {(data?.suggested_roles || []).map(role => (
-            <div key={role.role} className="glass-panel p-6 bg-white border-none shadow-sm hover:shadow-lg transition-all cursor-pointer" onClick={() => fetchTree(role.role)}>
-              <p className="text-[10px] font-black text-[#A0AEC0] uppercase tracking-widest mb-4">Fit Score</p>
+            <div
+              key={role.role}
+              className="glass-panel p-6 bg-white border-none shadow-sm hover:shadow-lg transition-all cursor-pointer"
+              onClick={() => {
+                setRoleOverride(role.role);
+                fetchTree(role.role);
+              }}
+            >
+              <p className="text-[10px] font-black text-[#A0AEC0] uppercase tracking-widest mb-4">Projected Readiness</p>
               <div className="flex items-end gap-2 mb-6">
-                <span className="text-3xl font-black leading-none">{Math.round(role.fit_score)}%</span>
+                <span className="text-3xl font-black leading-none">
+                  {Math.round(typeof role.projected_readiness_score === 'number' ? role.projected_readiness_score : role.fit_score)}%
+                </span>
               </div>
               <p className="text-sm font-black mb-4 leading-tight truncate">{role.role}</p>
               <div className="h-1.5 w-full bg-[#F1F3F5] rounded-full overflow-hidden">
-                <motion.div initial={{ width: 0 }} animate={{ width: `${role.fit_score}%` }} className="h-full bg-[#6366F1]" />
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{
+                    width: `${typeof role.projected_readiness_score === 'number' ? role.projected_readiness_score : role.fit_score}%`,
+                  }}
+                  className="h-full bg-[#6366F1]"
+                />
               </div>
-              <p className="mt-3 text-[9px] font-bold text-[#A0AEC0] uppercase">{role.matched_required}/{role.total_required} skills</p>
+              <p className="mt-3 text-[9px] font-bold text-[#A0AEC0] uppercase">
+                Core fit: {role.matched_required}/{role.total_required} skills
+              </p>
             </div>
           ))}
         </div>

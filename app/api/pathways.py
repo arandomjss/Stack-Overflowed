@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from flask import Blueprint, jsonify, request
 
 from app.database import get_db_connection
+from app.services.readiness import compute_core_fit, compute_role_readiness
 from app.services.resume_analysis.roadmap import _load_roles
 from app.services.resume_analysis.utils import match_role
 
@@ -190,29 +191,24 @@ def get_pathway_tree():
 
             phases_out.append({'phase': phase_name, 'skills': skills_out})
 
-        total = complete + weak + missing
-        readiness_score = round((complete / total) * 100, 2) if total > 0 else 0.0
+        # Use a single shared definition of readiness across the app
+        readiness_stats = compute_role_readiness(role_requirements, skill_to_conf)
 
-        # "Which jobs can you get": score other roles by foundation+core match
+        # "Which jobs can you get": score other roles (core-fit + projected readiness)
         suggested_roles: List[Dict[str, Any]] = []
         for role_name, reqs in roles_data.items():
-            req_skills = (reqs.get('foundation', []) or []) + (reqs.get('core', []) or [])
-            if not req_skills:
+            core_fit = compute_core_fit(reqs, skill_to_conf)
+            if core_fit['total_required'] <= 0:
                 continue
 
-            matched_required = 0
-            for req in req_skills:
-                c = _find_matching_confidence(req, skill_to_conf)
-                if c is not None and c >= 0.5:
-                    matched_required += 1
-
-            fit_score = (matched_required / len(req_skills)) * 100
+            projected = compute_role_readiness(reqs, skill_to_conf)
             suggested_roles.append(
                 {
                     'role': role_name,
-                    'fit_score': round(fit_score, 2),
-                    'matched_required': matched_required,
-                    'total_required': len(req_skills),
+                    'fit_score': core_fit['fit_score'],
+                    'matched_required': core_fit['matched_required'],
+                    'total_required': core_fit['total_required'],
+                    'projected_readiness_score': projected['readiness_score'],
                 }
             )
 
@@ -227,11 +223,11 @@ def get_pathway_tree():
                 'target_role': matched_role,
                 'available_roles': available_roles,
                 'stats': {
-                    'skills_total': total,
-                    'skills_complete': complete,
-                    'skills_weak': weak,
-                    'skills_missing': missing,
-                    'readiness_score': readiness_score,
+                    'skills_total': readiness_stats['skills_total'],
+                    'skills_complete': readiness_stats['skills_complete'],
+                    'skills_weak': readiness_stats['skills_weak'],
+                    'skills_missing': readiness_stats['skills_missing'],
+                    'readiness_score': readiness_stats['readiness_score'],
                 },
                 'pathway': {
                     'phases': phases_out,
