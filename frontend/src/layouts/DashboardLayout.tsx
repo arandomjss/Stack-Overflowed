@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Upload, Target, Github, LogOut, User, Award } from 'lucide-react';
+import { Home, Upload, Target, Github, LogOut, User, Award, GitBranch } from 'lucide-react';
 
 const DashboardLayout: React.FC = () => {
     const navigate = useNavigate();
@@ -20,6 +20,7 @@ const DashboardLayout: React.FC = () => {
         { path: '/dashboard/skills', icon: Target, label: 'My Skills' },
         { path: '/dashboard/recommendations', icon: Award, label: 'Recommendations' },
         { path: '/dashboard/github', icon: Github, label: 'GitHub' },
+        { path: '/dashboard/pathways', icon: GitBranch, label: 'Career Pathways' },
     ];
 
     return (

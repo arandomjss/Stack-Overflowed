@@ -3,6 +3,7 @@ from app.api import resume
 from app.api.user_profile import profile_bp
 from app.api.integrations import integrations_bp
 from app.api.recommendations import recommendations_bp
+from app.api.pathways import pathways_bp
 from app.routes.gap_analysis import gap_analysis_bp
 from app.routes import auth_bp
 from app.models.database import db
@@ -48,6 +49,7 @@ app.register_blueprint(resume.bp, url_prefix="/api/resume")
 app.register_blueprint(profile_bp, url_prefix="/api")
 app.register_blueprint(integrations_bp, url_prefix="/api")
 app.register_blueprint(recommendations_bp, url_prefix="/api")
+app.register_blueprint(pathways_bp, url_prefix="/api")
 app.register_blueprint(gap_analysis_bp, url_prefix="/api")
 app.register_blueprint(auth_bp, url_prefix="/auth")
 
