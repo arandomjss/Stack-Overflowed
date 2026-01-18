@@ -100,15 +100,14 @@ GITHUB_TOKEN=ghp_your_token_here
 
 If you want a predictable demo login, run:
 
-```bash
-python test_auth.py
-```
+register and log in with:
+- Username: `varantesting`
+- Password: `Varantesting123`
+empty profile to test extraction from resume and adding into the profile 
 
-It registers and logs in with:
-- Username: `testuser`
-- Password: `password123`
-
-If the user already exists, either delete `skillgenome.db` and re-run `python app/init_db.py`, or register a different username in the UI.
+- Username: `xyz`
+- Password: `123456`
+already made profile with pre defined skills 
 
 ## API Smoke Test (Recommended)
 
