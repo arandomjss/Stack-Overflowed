@@ -29,16 +29,25 @@ def _load_roles() -> Dict:
         conn.close()
     return roles_data
 
+from app.services.resume_analysis.utils import match_role
+
 def _get_user_skills(scored_skills: List[Skill], threshold: float = 0.3) -> Set[str]:
     return {skill.name.lower() for skill in scored_skills if skill.confidence >= threshold}
 
 def generate_roadmap(scored_skills: List[Skill], target_role: str) -> List[RoadmapPhase]:
     roles_data = _load_roles()
     
-    if target_role not in roles_data:
-        target_role = list(roles_data.keys())[0]
+    matched_role_name = match_role(target_role, roles_data)
     
-    role_requirements = roles_data[target_role]
+    if matched_role_name:
+        role_requirements = roles_data[matched_role_name]
+    else:
+        # Fallback to software engineer if possible, otherwise use first role
+        if 'software engineer' in roles_data:
+            role_requirements = roles_data['software engineer']
+        else:
+            role_requirements = roles_data[list(roles_data.keys())[0]]
+    
     user_skills = _get_user_skills(scored_skills)
     
     foundation_skills = []

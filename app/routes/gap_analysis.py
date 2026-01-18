@@ -51,35 +51,22 @@ def analyze_gaps(user_id):
             user_skills.append(skill_dict)
         
         # 3. Load role requirements from database
-        cursor.execute("""
-            SELECT category, skill FROM roles 
-            WHERE LOWER(role_name) = LOWER(?)
-        """, (target_role,))
+        from app.services.resume_analysis.roadmap import _load_roles
+        from app.services.resume_analysis.utils import match_role
         
-        role_rows = cursor.fetchall()
+        roles_data = _load_roles()
+        matched_role_name = match_role(target_role, roles_data)
         
-        if not role_rows:
-            # Get available roles
-            cursor.execute("SELECT DISTINCT role_name FROM roles")
-            available_roles = [row['role_name'] for row in cursor.fetchall()]
+        if not matched_role_name:
             return jsonify({
                 "error": f"Role '{target_role}' not found",
-                "available_roles": available_roles
+                "available_roles": list(roles_data.keys())
             }), 404
 
-        
-        # Organize skills by category
-        role_requirements = {
-            'foundation': [],
-            'core': [],
-            'advanced': [],
-            'projects': []
-        }
-        
-        for row in role_rows:
-            category = row['category'].lower()
-            if category in role_requirements:
-                role_requirements[category].append(row['skill'])
+        role_requirements = roles_data[matched_role_name]
+        # Override target_role with matched canonical name for consistency
+        target_role = matched_role_name
+
         
         # 4. Calculate gaps using scorer
         # Extract required skills from role
@@ -253,10 +240,13 @@ def generate_recommendations(missing_required, missing_preferred, weak_skills, s
             recommendations.append({
                 "type": "course",
                 "priority": "high",
-                "skill_target": skill,
+                "skill": skill,
                 "action": f"Complete course: {course['title']}",
-                "platform": course['platform'],
-                "url": course['url'],
+                "courses": [{
+                    "platform": course['platform'],
+                    "title": course['title'],
+                    "url": course['url']
+                }],
                 "reason": f"Critical skill gap - {skill} is required for {role}"
             })
     
@@ -265,8 +255,9 @@ def generate_recommendations(missing_required, missing_preferred, weak_skills, s
         recommendations.append({
             "type": "project",
             "priority": "medium",
-            "skill_target": weak['skill'],
+            "skill": weak['skill'],
             "action": f"Build a project using {weak['skill']}",
+            "courses": [],
             "estimated_time": "2-4 weeks",
             "reason": f"Strengthen existing knowledge (current: {weak['current_confidence']:.0%})"
         })
@@ -288,10 +279,13 @@ def generate_recommendations(missing_required, missing_preferred, weak_skills, s
             recommendations.append({
                 "type": "course",
                 "priority": "low",
-                "skill_target": skill,
+                "skill": skill,
                 "action": f"Learn {skill} to increase competitiveness",
-                "platform": course['platform'],
-                "url": course['url'],
+                "courses": [{
+                    "platform": course['platform'],
+                    "title": course['title'],
+                    "url": course['url']
+                }],
                 "reason": "Preferred skill for role advancement"
             })
     
